@@ -94,8 +94,8 @@ loadTexture(gl, "assets/wallbrickmixed256x256_2048x2048_02_nrm2.png").then(norma
     gl.clear(gl.COLOR_BUFFER_BIT);
     mat4.identity(model);
     mat4.translate(model, model, [0, 0, -1]);
-    mat4.rotateY(model, model, 0.5 * Math.cos(performance.now() / 1000.0));
-    mat4.rotateX(model, model, 0.5 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
+    mat4.rotateY(model, model, 0.3 * Math.cos(performance.now() / 1000.0));
+    mat4.rotateX(model, model, 0.3 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
     standardMaterial.updateModel(gl, model);
     
     gl.activeTexture(gl.TEXTURE1);

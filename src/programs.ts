@@ -62,9 +62,15 @@ export class GrassProgram {
         vec3 sampled = texture2D(u_normal, v_texcoord).rgb;
         vec3 normal = normalize(tbn * (sampled * 2.0 - 1.0));
 
-        vec3 n = (normal + 1.0) / 2.0;
+        vec3 eye = normalize(v_eye);
+        
+         vec3 light = eye;
+        //vec3 light = vec3(0.0, 1.0, 0.0);
 
-        gl_FragColor = vec4(n, 1.0);
+        float d = clamp(dot(normal, light), 0.0, 1.0);
+        float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
+
+        gl_FragColor = vec4(vec3(0.3 + 0.3 * d + 0.4 * s), 1.0);
       }
     `, {
       "a_position": 0,
