@@ -1,45 +1,102 @@
 import { createProgram } from "./misc";
+import { mat4 } from "gl-matrix";
 
-export class StandardMaterialProgram {
+export class GrassProgram {
   private program: WebGLProgram;
-  private projectViewModelLocation: WebGLUniformLocation;
+  private modelLocation: WebGLUniformLocation;
+  private viewLocation: WebGLUniformLocation;
+  private projectLocation: WebGLUniformLocation;
+  private normalLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     this.program = createProgram(gl, `
       precision mediump float;
 
       attribute vec4 a_position;
+      attribute vec2 a_texcoord;
+      attribute vec3 a_tangent;
+      attribute vec3 a_binormal;
+      attribute vec3 a_normal;
 
-      uniform mat4 u_projectViewModel;
+      uniform mat4 u_model;
+      uniform mat4 u_view;
+      uniform mat4 u_project;
+
+      varying vec2 v_texcoord;
+      varying vec3 v_eye;
+      varying vec3 v_tangent;
+      varying vec3 v_binormal;
+      varying vec3 v_normal;
 
       void main(void) {
-        gl_Position = u_projectViewModel * a_position;
+        mat4 viewModel = u_view * u_model;
+        mat3 viewModel3 = mat3(viewModel);
+
+        gl_Position = u_project * viewModel * a_position;
+        
+        v_texcoord = a_texcoord;
+        
+
+        v_eye = -(viewModel * a_position).xyz;
+        v_tangent = viewModel3 * a_tangent;
+        v_binormal = viewModel3 * a_binormal;
+        v_normal = viewModel3 * a_normal;
+
+        if (dot(v_eye, v_normal) < 0.0) {
+          v_normal = -v_normal;
+        }
       }
     `, `
       precision mediump float;
 
+      uniform sampler2D u_normal;
+
+      varying vec2 v_texcoord;
+      varying vec3 v_eye;
+      varying vec3 v_tangent;
+      varying vec3 v_binormal;
+      varying vec3 v_normal;
+
       void main(void) {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        mat3 tbn = mat3(v_tangent, v_binormal, v_normal);
+        vec3 sampled = texture2D(u_normal, v_texcoord).rgb;
+        vec3 normal = normalize(tbn * (sampled * 2.0 - 1.0));
+
+        vec3 n = (normal + 1.0) / 2.0;
+
+        gl_FragColor = vec4(n, 1.0);
       }
     `, {
-      "a_position": 0
+      "a_position": 0,
+      "a_texcoord": 1,
+      "a_tangent": 2,
+      "a_binormal": 3,
+      "a_normal": 4
     });
 
-    this.projectViewModelLocation = gl.getUniformLocation(this.program, "u_projectViewModel");
+    this.modelLocation = gl.getUniformLocation(this.program, "u_model");
+    this.viewLocation = gl.getUniformLocation(this.program, "u_view");
+    this.projectLocation = gl.getUniformLocation(this.program, "u_project");
+    this.normalLocation = gl.getUniformLocation(this.program, "u_normal");
   }
 
   use(gl: WebGLRenderingContext) {
     gl.useProgram(this.program);
   }
 
-  setUniforms(gl: WebGLRenderingContext) {
-    const n = 0.1;
-    const f = 100.0;
-    const r = 16 / 9.0;
-    const t = 1.0;
+  updateView(gl: WebGLRenderingContext, view: mat4) {
+    gl.uniformMatrix4fv(this.viewLocation, false, view);
+  }
 
-    gl.uniformMatrix4fv(this.projectViewModelLocation, false, new Float32Array([
-      n / r, 0, 0, 0, 0, n / t, 0, 0, 0, 0, -(f + n) / (f - n), -1, 0, 0, -2 * f * n / (f - n), 0
-    ]));
+  updateModel(gl: WebGLRenderingContext, model: mat4) {
+    gl.uniformMatrix4fv(this.modelLocation, false, model);
+  }
+
+  updateProject(gl: WebGLRenderingContext, project: mat4) {
+    gl.uniformMatrix4fv(this.projectLocation, false, project);
+  }
+
+  updateNormal(gl: WebGLRenderingContext, unit: number) {
+    gl.uniform1i(this.normalLocation, unit);
   }
 }
