@@ -1,4 +1,4 @@
-import { StandardProgram, ForestProgram } from "./programs";
+import { StandardProgram, ForestProgram, CanopyProgram } from "./programs";
 import { VertexBinding, VertexStream, IndexedVertexStream } from "./meshes";
 import { createVertexBuffer, createIndexBuffer, loadTexture } from "./misc";
 import { mat4 } from "gl-matrix";
@@ -7,8 +7,15 @@ import { Prop } from "./scene";
 const canvas = document.getElementById("canvas") as HTMLCanvasElement;
 const gl = canvas.getContext("webgl");
 
+const props: Prop[] = [];
+
 const standardMaterial = new StandardProgram(gl);
 const forestMaterial = new ForestProgram(gl);
+const canopyMaterial = new CanopyProgram(gl);
+
+
+
+
 
 const vertexBuffer1 = createVertexBuffer(gl, new Float32Array([
   -0.5, 0, -0.5,   0, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
@@ -16,44 +23,16 @@ const vertexBuffer1 = createVertexBuffer(gl, new Float32Array([
   -0.5, 0,  0.5,   0, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0,
    0.5, 0,  0.5,   1, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0
 ]).buffer);
-
 // const vertexBuffer = createVertexBuffer(gl, new Float32Array([
 //   -0.5, -0.5, 0.0,   0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
 //    0.5, -0.5, 0.0,   1, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
 //   -0.5,  0.5, 0.0,   0, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
 //    0.5,  0.5, 0.0,   1, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1
 // ]).buffer);
-
 const indexBuffer1 = createIndexBuffer(gl, new Uint16Array([
   0, 1, 2,
   1, 3, 2
 ]).buffer);
-
-const forestVertices: number[] = [];
-const forestIndices: number[] = [];
-
-for (let j = 0; j < 11; ++j) {
-  for (let i = 0; i < 11; ++i) {
-    forestVertices.push(
-      -0.03 + i * 0.1 - 0.5, 0, j * 0.1 - 0.5,   0, 0,      0, 0, 1,
-      0.03 + i * 0.1 - 0.5, 0, j * 0.1 - 0.5,   1, 0,       0, 0, 1,
-     -0.03 + i * 0.1 - 0.5, 0.2, j * 0.1 - 0.5,   0, 0.5,   0, 0, 1,
-      0.03 + i * 0.1 - 0.5, 0.2, j * 0.1 - 0.5,   1, 0.5,   0, 0, 1,
-      -0.03 + i * 0.1 - 0.5, 0.4, j * 0.1 - 0.5,   0, 1,    0, 0, 1,
-      0.03 + i * 0.1 - 0.5, 0.4, j * 0.1 - 0.5,   1, 1,     0, 0, 1
-    );
-    const baseVertex = (i + j * 11) * 6;
-    forestIndices.push(baseVertex + 0, baseVertex + 1, baseVertex + 2, baseVertex + 1, baseVertex + 3, baseVertex + 2);
-    forestIndices.push(baseVertex + 2, baseVertex + 3, baseVertex + 4, baseVertex + 3, baseVertex + 5, baseVertex + 4);
-  }
-}
-
-
-
-const vertexBuffer2 = createVertexBuffer(gl, new Float32Array(forestVertices).buffer);
-
-const indexBuffer2 = createIndexBuffer(gl, new Uint16Array(forestIndices).buffer);
-
 const binding1 = new VertexBinding(vertexBuffer1, [
   {
     location: 0,
@@ -96,7 +75,32 @@ const binding1 = new VertexBinding(vertexBuffer1, [
     offset: 44
   }
 ]);
+const indexedStream1 = new IndexedVertexStream(new VertexStream([binding1]), indexBuffer1);
+const prop1 = new Prop(indexedStream1, standardMaterial, 0, 6);
+props.push(prop1);
 
+
+
+
+const forestVertices: number[] = [];
+const forestIndices: number[] = [];
+for (let j = 0; j < 11; ++j) {
+  for (let i = 0; i < 11; ++i) {
+    forestVertices.push(
+      -0.03 + i * 0.1 - 0.5, 0, j * 0.1 - 0.5,   0, 0,      0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 0, j * 0.1 - 0.5,   1, 0,       0, 0, 1,
+     -0.03 + i * 0.1 - 0.5, 0.2, j * 0.1 - 0.5,   0, 0.5,   0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 0.2, j * 0.1 - 0.5,   1, 0.5,   0, 0, 1,
+      -0.03 + i * 0.1 - 0.5, 0.4, j * 0.1 - 0.5,   0, 1,    0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 0.4, j * 0.1 - 0.5,   1, 1,     0, 0, 1
+    );
+    const baseVertex = (i + j * 11) * 6;
+    forestIndices.push(baseVertex + 0, baseVertex + 1, baseVertex + 2, baseVertex + 1, baseVertex + 3, baseVertex + 2);
+    forestIndices.push(baseVertex + 2, baseVertex + 3, baseVertex + 4, baseVertex + 3, baseVertex + 5, baseVertex + 4);
+  }
+}
+const vertexBuffer2 = createVertexBuffer(gl, new Float32Array(forestVertices).buffer);
+const indexBuffer2 = createIndexBuffer(gl, new Uint16Array(forestIndices).buffer);
 const binding2 = new VertexBinding(vertexBuffer2, [
   {
     location: 0,
@@ -123,20 +127,76 @@ const binding2 = new VertexBinding(vertexBuffer2, [
     offset: 20
   }
 ]);
-
-const indexedStream1 = new IndexedVertexStream(new VertexStream([binding1]), indexBuffer1);
 const indexedStream2 = new IndexedVertexStream(new VertexStream([binding2]), indexBuffer2);
+const prop2 = new Prop(indexedStream2, forestMaterial, 0, forestIndices.length);
+props.push(prop2);
+
+
+
+
+
+
+
+
+
+const canopyVertices: number[] = [];
+const canopyIndices: number[] = [];
+for (let j = 0; j < 11; ++j) {
+  for (let i = 0; i < 11; ++i) {
+    canopyVertices.push(
+      -0.03 + i * 0.1 - 0.5, 1+0, j * 0.1 - 0.5,   0, 0,      0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 1+0, j * 0.1 - 0.5,   1, 0,       0, 0, 1,
+     -0.03 + i * 0.1 - 0.5, 1+0.2, j * 0.1 - 0.5,   0, 0.5,   0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 1+0.2, j * 0.1 - 0.5,   1, 0.5,   0, 0, 1,
+      -0.03 + i * 0.1 - 0.5, 1+0.4, j * 0.1 - 0.5,   0, 1,    0, 0, 1,
+      0.03 + i * 0.1 - 0.5, 1+0.4, j * 0.1 - 0.5,   1, 1,     0, 0, 1
+    );
+    const baseVertex = (i + j * 11) * 6;
+    canopyIndices.push(baseVertex + 0, baseVertex + 1, baseVertex + 2, baseVertex + 1, baseVertex + 3, baseVertex + 2);
+    canopyIndices.push(baseVertex + 2, baseVertex + 3, baseVertex + 4, baseVertex + 3, baseVertex + 5, baseVertex + 4);
+  }
+}
+const vertexBuffer3 = createVertexBuffer(gl, new Float32Array(canopyVertices).buffer);
+const indexBuffer3 = createIndexBuffer(gl, new Uint16Array(canopyIndices).buffer);
+const binding3 = new VertexBinding(vertexBuffer3, [
+  {
+    location: 0,
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 32,
+    offset: 0
+  },
+  {
+    location: 1,
+    size: 2,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 32,
+    offset: 12
+  },
+  {
+    location: 2,
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 32,
+    offset: 20
+  }
+]);
+const indexedStream3 = new IndexedVertexStream(new VertexStream([binding3]), indexBuffer3);
+const prop3 = new Prop(indexedStream3, canopyMaterial, 0, canopyIndices.length);
+props.push(prop3);
+
+
+
 
 const view = mat4.create();
 mat4.identity(view);
 const project = mat4.create();
 mat4.perspective(project, 1, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
 
-const props: Prop[] = [];
-const prop1 = new Prop(indexedStream1, standardMaterial, 0, 6);
-props.push(prop1);
-const prop2 = new Prop(indexedStream2, forestMaterial, 0, forestIndices.length);
-props.push(prop2);
+
 
 Promise.all([
   loadTexture(gl, "assets/grass-blade.png"),
