@@ -1,6 +1,6 @@
 import { loadImage, createTexture, createIndexBuffer, createVertexBuffer } from "./misc";
 import { Actor } from "./scene";
-import { mat4 } from "gl-matrix";
+import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { IndexedVertexStream, VertexStream, VertexBinding } from "./meshes";
 import { StandardProgram, Program, Material } from "./programs";
 import * as layouts from "./layouts";
@@ -33,12 +33,26 @@ export class Application {
   private normalImage: HTMLImageElement;
   private normalTexture: WebGLTexture;
 
-  constructor() {
+  // View - original
+  center = vec2.fromValues(0, 0);
+  rotation = 0;
+  resolution = 1;
+  // View - processed
+  translation = vec3.create();
+
+  constructor(private backgroundColor?: vec4) {
   }
 
   async load() {
     this.diffuseImage = await loadImage("assets/60b963f8b67ad2df8c49e82e9ef625fb.jpg");
     this.normalImage = await loadImage("assets/wallbrickmixed256x256_2048x2048_02_nrm2.png");
+  }
+
+  setView(center: [number, number], rotation: number, resolution: number) {
+    this.center[0] = center[0];
+    this.center[1] = center[1];
+    this.rotation = rotation;
+    this.resolution = resolution;
   }
 
   render(gl: WebGLRenderingContext) {
@@ -66,22 +80,17 @@ export class Application {
 
   private doUpdate() {
     const actor = this.actors[0];
-    
+
     mat4.identity(actor.model);
-    mat4.translate(actor.model, actor.model, [0, -0.8, -2]);
-    mat4.rotateY(actor.model, actor.model, 0.3 * Math.cos(performance.now() / 1000.0));
-    mat4.rotateX(actor.model, actor.model, 0.3 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
+    mat4.translate(actor.model, actor.model, [0, 0, 0]);
+    mat4.rotateY(actor.model, actor.model, 0.1 * Math.cos(performance.now() / 1000.0));
+    mat4.rotateX(actor.model, actor.model, 0.1 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
   }
 
   private sceneSetup() {
     const actor = new Actor(this.meshGround, 0, 6, this.standardProgram, this.rock);
     
     this.actors.push(actor);
-
-    mat4.identity(actor.model);
-    mat4.translate(actor.model, actor.model, [0, -0.8, -2]);
-    mat4.rotateY(actor.model, actor.model, 0.3 * Math.cos(performance.now() / 1000.0));
-    mat4.rotateX(actor.model, actor.model, 0.3 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
   }
 
   private doInitialize(gl: WebGLRenderingContext) {
@@ -103,10 +112,20 @@ export class Application {
     
     // Ground mesh
     this.vbGround = createVertexBuffer(gl, new Float32Array([
-      -0.5, 0, -0.5,   0, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
-       0.5, 0, -0.5,   1, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
-      -0.5, 0,  0.5,   0, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0,
-       0.5, 0,  0.5,   1, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0
+      -50, -50, 0.0,       0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+       50, -50, 0.0,     100, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+      -50,  50, 0.0,     0, 100,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+       50,  50, 0.0,   100, 100,   1, 0, 0,   0, 1, 0,   0, 0, 1
+      
+      // -0.5, -0.5, 0.0,   0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+      //  0.5, -0.5, 0.0,   1, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+      // -0.5,  0.5, 0.0,   0, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+      //  0.5,  0.5, 0.0,   1, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1
+
+      // -0.5, 0, -0.5,   0, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
+      //  0.5, 0, -0.5,   1, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
+      // -0.5, 0,  0.5,   0, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0,
+      //  0.5, 0,  0.5,   1, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0
     ]).buffer);
     this.ibGround = createIndexBuffer(gl, new Uint16Array([
       0, 1, 2,
@@ -120,10 +139,18 @@ export class Application {
   }
 
   private doRender(gl: WebGLRenderingContext) {
-    gl.clearColor(0.2, 0.3, 0.5, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
+    if (this.backgroundColor) {
+      const bg = this.backgroundColor;
+      gl.clearColor(bg[0], bg[1], bg[2], bg[3]);
+      gl.clear(gl.COLOR_BUFFER_BIT);
+    }
 
     mat4.identity(this.view);
+    this.translation[0] = 0;
+    this.translation[1] = 0;
+    this.translation[2] = -1 / this.resolution;
+    mat4.translate(this.view, this.view, this.translation);
+    mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
 
     this.framePrograms.clear();

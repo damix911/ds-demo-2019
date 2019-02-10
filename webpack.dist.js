@@ -26,9 +26,9 @@ const UglifyJSPlugin = require('uglifyjs-webpack-plugin');
 
 module.exports = {
 	entry: {
-		index: './src/index.ts'
+		app: './src/app.ts'
 	},
-	
+
 	module: {
 		rules: [
 			{
@@ -70,7 +70,9 @@ module.exports = {
 	output: {
 		chunkFilename: '[name].js',
 		filename: '[name].js',
-		path: path.resolve(__dirname, 'www', 'bundles')
+		path: path.resolve(__dirname, 'www', 'bundles'),
+		library: 'app',
+		libraryTarget: 'umd'
 	},
 
 	mode: 'development',
