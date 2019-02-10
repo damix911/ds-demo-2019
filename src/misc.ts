@@ -50,12 +50,12 @@ export function createTexture(gl: WebGLRenderingContext, image: HTMLImageElement
   return texture;
 }
 
-export function loadTexture(gl: WebGLRenderingContext, url: string): Promise<WebGLTexture> {
+export function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise(resolve => {
     const image = new Image();
     image.src = url;
     image.addEventListener("load", () => {
-      resolve(createTexture(gl, image));
+      resolve(image);
     });
   });
 }

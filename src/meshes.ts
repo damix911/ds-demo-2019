@@ -1,5 +1,7 @@
+import { Program } from "./programs";
+
 export interface IAttribute {
-  location: number;
+  name: string;
   size: number;
   type: number;
   normalized: boolean;
@@ -16,12 +18,13 @@ export class VertexBinding {
     this.attributes = attributes;
   }
 
-  bind(gl: WebGLRenderingContext) {
+  bindToProgram(gl: WebGLRenderingContext, program: Program) {
     gl.bindBuffer(gl.ARRAY_BUFFER, this.vertexBuffer);
 
     for (const attribute of this.attributes) {
-      gl.enableVertexAttribArray(attribute.location);
-      gl.vertexAttribPointer(attribute.location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.offset);
+      const location = program.locations[attribute.name];
+      gl.enableVertexAttribArray(location);
+      gl.vertexAttribPointer(location, attribute.size, attribute.type, attribute.normalized, attribute.stride, attribute.offset);
     }
     
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -35,9 +38,13 @@ export class VertexStream {
     this.vertexBindings = vertexBindings;
   }
 
-  bind(gl: WebGLRenderingContext) {
+  bindToProgram(gl: WebGLRenderingContext, program: Program) {
+    for (let i = 0; i < 8; ++i) {
+      gl.disableVertexAttribArray(i);
+    }
+
     for (const binding of this.vertexBindings) {
-      binding.bind(gl);
+      binding.bindToProgram(gl, program);
     }
   }
 }
@@ -51,8 +58,8 @@ export class IndexedVertexStream {
     this.indexBuffer = indexBuffer;
   }
 
-  bind(gl: WebGLRenderingContext) {
-    this.vertexStream.bind(gl);
+  bindToProgram(gl: WebGLRenderingContext, program: Program) {
+    this.vertexStream.bindToProgram(gl, program);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
   }
 }
