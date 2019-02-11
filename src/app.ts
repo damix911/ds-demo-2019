@@ -83,12 +83,12 @@ export class Application {
 
     mat4.identity(actor.model);
     mat4.translate(actor.model, actor.model, [0, 0, 0]);
-    mat4.rotateY(actor.model, actor.model, 0.1 * Math.cos(performance.now() / 1000.0));
-    mat4.rotateX(actor.model, actor.model, 0.1 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
+    // mat4.rotateY(actor.model, actor.model, 0.1 * Math.cos(performance.now() / 1000.0));
+    // mat4.rotateX(actor.model, actor.model, 0.1 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
   }
 
   private sceneSetup() {
-    const actor = new Actor(this.meshGround, 0, 6, this.standardProgram, this.rock);
+    const actor = new Actor(this.meshGround, 0, 18, this.standardProgram, this.rock);
     
     this.actors.push(actor);
   }
@@ -111,12 +111,24 @@ export class Application {
     const pttbn = layouts.PTTBN(gl);
     
     // Ground mesh
+    const x = -10539183.811482586;
+    const y = 4651153.046248602;
     this.vbGround = createVertexBuffer(gl, new Float32Array([
-      -50, -50, 0.0,       0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
-       50, -50, 0.0,     100, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
-      -50,  50, 0.0,     0, 100,   1, 0, 0,   0, 1, 0,   0, 0, 1,
-       50,  50, 0.0,   100, 100,   1, 0, 0,   0, 1, 0,   0, 0, 1
+      -500+x, -500+y, 70.0,       0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+       500+x, -500+y, 70.0,     1, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+      -500+x,  500+y, 70.0,     0, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
+       500+x,  500+y, 70.0,   1, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
       
+      -500+x, -500+y, 0.0,       0, 0,   1, 0, 0,   0, 0, .1,   0, -1, 0,
+       500+x, -500+y, 0.0,     1, 0,   1, 0, 0,   0, 0, .1,   0, -1, 0,
+      -500+x, -500+y, 70.0,     0, .1,   1, 0, 0,   0, 0, .1,   0, -1, 0,
+       500+x, -500+y, 70.0,   1, .1,   1, 0, 0,   0, 0, .1,   0, -1, 0,
+
+       -500+x, 500+y, 0.0,       0, 0,   1, 0, 0,   0, 0, .1,   0, 1, 0,
+       500+x, 500+y, 0.0,     1, 0,   1, 0, 0,   0, 0, .1,   0, 1, 0,
+      -500+x, 500+y, 70.0,     0, .1,   1, 0, 0,   0, 0, .1,   0, 1, 0,
+       500+x, 500+y, 70.0,   1, .1,   1, 0, 0,   0, 0, .1,   0, 1, 0,
+
       // -0.5, -0.5, 0.0,   0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
       //  0.5, -0.5, 0.0,   1, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
       // -0.5,  0.5, 0.0,   0, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
@@ -129,7 +141,13 @@ export class Application {
     ]).buffer);
     this.ibGround = createIndexBuffer(gl, new Uint16Array([
       0, 1, 2,
-      1, 3, 2
+      1, 3, 2,
+
+      4, 5, 6,
+      5, 7, 6,
+
+      8, 9, 10,
+      9, 11, 10
     ]).buffer);
     const bindingGround = new VertexBinding(this.vbGround, pttbn);
     this.meshGround = new IndexedVertexStream(new VertexStream([bindingGround]), this.ibGround);
@@ -146,14 +164,18 @@ export class Application {
     }
 
     mat4.identity(this.view);
-    this.translation[0] = 0;
-    this.translation[1] = 0;
-    this.translation[2] = -1 / this.resolution;
-    mat4.translate(this.view, this.view, this.translation);
+    const d = 850 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
-    mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, 0.1, 100.0);
+    this.translation[0] = -this.center[0];
+    this.translation[1] = -this.center[1];
+    this.translation[2] = -d;
+    mat4.translate(this.view, this.view, this.translation);
+    
+    mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, d - 100, d + 100);
 
     this.framePrograms.clear();
+
+    gl.enable(gl.DEPTH_TEST);
 
     for (const actor of this.actors) {
       const indexedStream = actor.indexedStream;
