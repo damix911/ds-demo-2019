@@ -1,9 +1,10 @@
 import { loadImage, createTexture, createIndexBuffer, createVertexBuffer } from "./misc";
 import { Actor } from "./scene";
 import { mat4, vec4, vec2, vec3 } from "gl-matrix";
-import { IndexedVertexStream, VertexStream, VertexBinding } from "./meshes";
-import { StandardProgram, Program, Material } from "./programs";
+import { Mesh, IGeometry } from "./meshes";
+import { StandardProgram, Program, Material, CanopyProgram } from "./programs";
 import * as layouts from "./layouts";
+import { createCanopyMesh } from "./demo/misc";
 
 export class Application {
   private initialized = false;
@@ -21,17 +22,21 @@ export class Application {
 
   // Programs
   private standardProgram: Program;
+  private canopyProgram: Program;
 
   // Materials
   private rock: Material;
+  private canopy: Material;
 
-  private meshGround: IndexedVertexStream;
-  private vbGround: WebGLBuffer;
-  private ibGround: WebGLBuffer;
+  private groundMesh: Mesh;
+  private canopyMesh: Mesh;
+  private canopyGeometry: IGeometry;
   private diffuseImage: HTMLImageElement;
   private diffuseTexture: WebGLTexture;
   private normalImage: HTMLImageElement;
   private normalTexture: WebGLTexture;
+  private leavesImage: HTMLImageElement;
+  private leavesTexture: WebGLTexture;
 
   // View - original
   center = vec2.fromValues(0, 0);
@@ -46,6 +51,7 @@ export class Application {
   async load() {
     this.diffuseImage = await loadImage("assets/60b963f8b67ad2df8c49e82e9ef625fb.jpg");
     this.normalImage = await loadImage("assets/wallbrickmixed256x256_2048x2048_02_nrm2.png");
+    this.leavesImage = await loadImage("assets/leaves.png");
   }
 
   setView(center: [number, number], rotation: number, resolution: number) {
@@ -88,15 +94,18 @@ export class Application {
   }
 
   private sceneSetup() {
-    const actor = new Actor(this.meshGround, 0, 18, this.standardProgram, this.rock);
-    
-    this.actors.push(actor);
+    // const actor1 = new Actor(this.groundMesh.slice(0, 18), this.standardProgram, this.rock);
+    // this.actors.push(actor1);
+
+    const actor2 = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
+    this.actors.push(actor2);
   }
 
   private doInitialize(gl: WebGLRenderingContext) {
     // Textures
     this.diffuseTexture = createTexture(gl, this.diffuseImage);
     this.normalTexture = createTexture(gl, this.normalImage);
+    this.leavesTexture = createTexture(gl, this.leavesImage);
 
     // Materials
     this.rock = {
@@ -104,8 +113,14 @@ export class Application {
       normal: this.normalTexture
     };
 
+    this.canopy = {
+      diffuse: this.leavesTexture,
+      normal: this.normalTexture
+    };
+
     // Programs
     this.standardProgram = new StandardProgram(gl);
+    this.canopyProgram = new CanopyProgram(gl);
 
     // Meshes
     const pttbn = layouts.PTTBN(gl);
@@ -113,7 +128,7 @@ export class Application {
     // Ground mesh
     const x = -10539183.811482586;
     const y = 4651153.046248602;
-    this.vbGround = createVertexBuffer(gl, new Float32Array([
+    this.groundMesh = new Mesh(gl, layouts.PTTBN, new Float32Array([
       -500+x, -500+y, 70.0,       0, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
        500+x, -500+y, 70.0,     1, 0,   1, 0, 0,   0, 1, 0,   0, 0, 1,
       -500+x,  500+y, 70.0,     0, 1,   1, 0, 0,   0, 1, 0,   0, 0, 1,
@@ -138,8 +153,7 @@ export class Application {
       //  0.5, 0, -0.5,   1, 0,   1, 0, 0,   0, 0, -1,   0, 1, 0,
       // -0.5, 0,  0.5,   0, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0,
       //  0.5, 0,  0.5,   1, 1,   1, 0, 0,   0, 0, -1,   0, 1, 0
-    ]).buffer);
-    this.ibGround = createIndexBuffer(gl, new Uint16Array([
+    ]).buffer, new Uint16Array([
       0, 1, 2,
       1, 3, 2,
 
@@ -149,8 +163,11 @@ export class Application {
       8, 9, 10,
       9, 11, 10
     ]).buffer);
-    const bindingGround = new VertexBinding(this.vbGround, pttbn);
-    this.meshGround = new IndexedVertexStream(new VertexStream([bindingGround]), this.ibGround);
+
+    const trees = 1;
+    const particlesPerTree = 1000;
+    this.canopyMesh = createCanopyMesh(gl, trees, particlesPerTree);
+    this.canopyGeometry = this.canopyMesh.slice(0, trees * particlesPerTree * 6);
 
     // We are done
     this.initialized = true;
@@ -162,6 +179,9 @@ export class Application {
       gl.clearColor(bg[0], bg[1], bg[2], bg[3]);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
+
+    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+    gl.enable(gl.BLEND);
 
     mat4.identity(this.view);
     const d = 850 * this.resolution;
@@ -178,30 +198,33 @@ export class Application {
     gl.enable(gl.DEPTH_TEST);
 
     for (const actor of this.actors) {
-      const indexedStream = actor.indexedStream;
+      const mesh = actor.geometry.mesh;
       const program = actor.program;
       
       program.use(gl);
-      indexedStream.bindToProgram(gl, program);
+      mesh.bindToProgram(gl, program);
 
       if (!this.framePrograms.has(program)) {
         this.framePrograms.add(program);
         this.updateFrameUniforms(gl, program);
       }
   
-      if ("applyMaterial" in program) {
-        program.applyMaterial(gl, actor.material);
+      if ("updateMaterial" in program && actor.material) {
+        program.updateMaterial(gl, actor.material);
       }
       
       this.updateActorUniforms(gl, program, actor);
       
-      gl.drawElements(gl.TRIANGLES, actor.indexCount, gl.UNSIGNED_SHORT, 2 * actor.indexFrom);
+      actor.draw(gl);
     }
   }
 
   private doDispose(gl: WebGLRenderingContext) {
     gl.deleteTexture(this.diffuseTexture);
     gl.deleteTexture(this.normalTexture);
+    gl.deleteTexture(this.leavesImage);
+    this.groundMesh.dispose(gl);
+    this.canopyMesh.dispose(gl);
   }
 
   private updateFrameUniforms(gl: WebGLRenderingContext, program: Program) {

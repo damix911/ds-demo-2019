@@ -1,13 +1,6 @@
 import { Program } from "./programs";
-
-export interface IAttribute {
-  name: string;
-  size: number;
-  type: number;
-  normalized: boolean;
-  stride: number;
-  offset: number;
-}
+import { IAttribute, VertexLayout } from "./layouts";
+import { createVertexBuffer, createIndexBuffer } from "./misc";
 
 export class VertexBinding {
   private vertexBuffer: WebGLBuffer;
@@ -61,5 +54,64 @@ export class IndexedVertexStream {
   bindToProgram(gl: WebGLRenderingContext, program: Program) {
     this.vertexStream.bindToProgram(gl, program);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.indexBuffer);
+  }
+}
+
+export interface IGeometry {
+  mesh: Mesh;
+  draw(gl: WebGLRenderingContext): void;
+}
+
+export class Mesh {
+  private vertexStream: VertexStream | IndexedVertexStream;
+  private vertexBuffer: WebGLBuffer;
+  private indexBuffer?: WebGLBuffer;
+
+  constructor(gl: WebGLRenderingContext, vertexLayout: VertexLayout, vertexData: ArrayBuffer, indexData?: ArrayBuffer) {
+    this.vertexBuffer = createVertexBuffer(gl, vertexData);
+    const binding = new VertexBinding(this.vertexBuffer, vertexLayout(gl));
+    const vertexStream = new VertexStream([binding]);
+
+    if (indexData) {
+      this.indexBuffer = createIndexBuffer(gl, indexData);
+      this.vertexStream = new IndexedVertexStream(vertexStream, this.indexBuffer);
+    }
+    else {
+      this.vertexStream = vertexStream;
+    }
+  }
+
+  bindToProgram(gl: WebGLRenderingContext, program: Program) {
+    this.vertexStream.bindToProgram(gl, program);
+  }
+
+  dispose(gl: WebGLRenderingContext) {
+    gl.deleteBuffer(this.vertexBuffer);
+    this.vertexBuffer = null;
+
+    if (this.indexBuffer) {
+      gl.deleteBuffer(this.indexBuffer);
+      this.indexBuffer = null;
+    }
+
+    this.vertexStream = null;
+  }
+
+  draw(gl: WebGLRenderingContext, from: number, count: number) {
+    this.slice(from, count).draw(gl);
+  }
+  
+  slice(from: number, count: number): IGeometry {
+    return {
+      mesh: this,
+      draw(gl: WebGLRenderingContext) {
+        if (this.mesh.indexBuffer) {
+          gl.drawElements(gl.TRIANGLES, count, gl.UNSIGNED_SHORT, 2 * from);
+        }
+        else {
+          gl.drawArrays(gl.TRIANGLES, from, count);
+        }
+      }
+    }
   }
 }
