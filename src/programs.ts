@@ -194,15 +194,15 @@ export class CanopyProgram extends MaterialProgram {
       }
 
       void main(void) {
-        float r = noise(a_position.xy);
+        float r = a_random.z;
 
         vec4 position = a_position;
         //position.xy += vec2(cos(u_time + r * 10.0), sin(u_time + r * 10.0));
         vec2 xAxis = normalize(vec2(-1.0, 1.0));
         vec2 yAxis = vec2(-xAxis.y, xAxis.x);
         vec2 dir = xAxis * cos(0.2 * cos(1.7 * u_time + r * 10.0)) + yAxis * sin(0.2 * cos(1.7 * u_time + r * 10.0));
-        position.xy += 100.0 * cos(u_time + r * 10.0) * dir;
-        position.xy += 100.0 * (a_random.xy - 0.5);
+        position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
+        position.xy += 5.0 * (a_random.xy - 0.5);
         position.xyz += a_offset;
 
         mat4 viewModel = u_view * u_model;

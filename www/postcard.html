@@ -85,8 +85,17 @@
       var view = new MapView({
         container: "viewDiv",
         map: map,
-        center: [-94.675099, 38.505984],
-        zoom: 15
+        center: [
+          -94.6738513,
+           38.5107655
+        ],
+        zoom: 18
+        // center: [-94.675099, 38.505984],
+        // zoom: 15
+      });
+
+      view.on("click", function (evt) {
+        console.log(JSON.stringify({x: evt.mapPoint.x, y: evt.mapPoint.y}));
       });
     });
   </script>

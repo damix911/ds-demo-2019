@@ -164,10 +164,23 @@ export class Application {
       9, 11, 10
     ]).buffer);
 
-    const trees = 1;
-    const particlesPerTree = 1000;
+    const trees = [
+      {"x": -10538970.571200622, "y": 4651862.067061024},
+      {"x":-10538977.289298838,"y":4651829.223025421},
+      {"x":-10538975.79638813,"y":4651811.606679063},
+      {"x":-10538994.308480913,"y":4651795.781825556},
+      {"x":-10539005.953184437,"y":4651779.658389907},
+      {"x":-10539083.435250213,"y":4651680.97699204},
+      {"x":-10539043.425243216,"y":4651732.93028471},
+      {"x":-10539117.473614376,"y":4651669.630870652},
+      {"x":-10539199.285121225,"y":4651695.906099129},
+      {"x":-10539205.853928344,"y":4651716.806849053},
+      {"x":-10539226.157513985,"y":4651715.015356203},
+      {"x":-10539244.669606775,"y":4651727.555806157}
+    ];
+    const particlesPerTree = 100;
     this.canopyMesh = createCanopyMesh(gl, trees, particlesPerTree);
-    this.canopyGeometry = this.canopyMesh.slice(0, trees * particlesPerTree * 6);
+    this.canopyGeometry = this.canopyMesh.slice(0, trees.length * particlesPerTree * 6);
 
     // We are done
     this.initialized = true;
@@ -184,7 +197,7 @@ export class Application {
     gl.enable(gl.BLEND);
 
     mat4.identity(this.view);
-    const d = 850 * this.resolution;
+    const d = 1000 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     this.translation[0] = -this.center[0];
     this.translation[1] = -this.center[1];
@@ -215,6 +228,7 @@ export class Application {
       
       this.updateActorUniforms(gl, program, actor);
       
+      gl.depthFunc(gl.LEQUAL);
       actor.draw(gl);
     }
   }
