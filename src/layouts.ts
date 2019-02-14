@@ -39,6 +39,33 @@ export const PO = (gl: WebGLRenderingContext) => [
   }
 ];
 
+export const POR = (gl: WebGLRenderingContext) => [
+  {
+    name: "a_position",
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 36,
+    offset: 0
+  },
+  {
+    name: "a_offset",
+    size: 2,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 36,
+    offset: 12
+  },
+  {
+    name: "a_random",
+    size: 4,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 36,
+    offset: 20
+  }
+];
+
 export const PTTBNOR = (gl: WebGLRenderingContext) => [
   {
     name: "a_position",

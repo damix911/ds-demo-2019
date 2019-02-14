@@ -2,7 +2,7 @@ import { loadImage, createTexture, createIndexBuffer, createVertexBuffer } from 
 import { Actor } from "./scene";
 import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { Mesh, IGeometry } from "./meshes";
-import { StandardProgram, Program, Material, CanopyProgram, WaterProgram, GrassProgram, FireProgram } from "./programs";
+import { StandardProgram, Program, Material, CanopyProgram, WaterProgram, GrassProgram, SmokeProgram, SpriteProgram } from "./programs";
 import * as layouts from "./layouts";
 import { createCanopyMesh } from "./demo/misc";
 import { origin } from "./defs";
@@ -26,13 +26,15 @@ export class Application {
   private canopyProgram: Program;
   private waterProgram: Program;
   private grassProgram: Program;
-  private fireProgram: Program;
+  private smokeProgram: Program;
+  private spriteProgram: Program;
 
   // Materials
   private rock: Material;
   private canopy: Material;
   private water: Material;
   private grass: Material;
+  private smoke: Material;
   private fire: Material;
 
   private groundMesh: Mesh;
@@ -40,7 +42,7 @@ export class Application {
   private canopyGeometry: IGeometry;
   private waterMesh: Mesh;
   private grassMesh: Mesh;
-  private fireMesh: Mesh;
+  private smokeGeometry: IGeometry;
   private diffuseImage: HTMLImageElement;
   private diffuseTexture: WebGLTexture;
   private normalImage: HTMLImageElement;
@@ -131,15 +133,15 @@ export class Application {
     const actor4 = new Actor(this.grassMesh.slice(0, 6), this.grassProgram, this.grass);
     this.actors.push(actor4);
 
-    const actor5 = new Actor(this.fireMesh.slice(0, 6), this.fireProgram, this.fire);
+    const actor5 = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
     this.actors.push(actor5);
     mat4.translate(actor5.model, actor5.model, [200, -900, 0]);
 
-    // const actor6 = new Actor(this.fireMesh.slice(0, 6), this.fireProgram, this.fire);
+    // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor6);
     // mat4.translate(actor6.model, actor6.model, [0, 120, 0]);
 
-    // const actor7 = new Actor(this.fireMesh.slice(0, 6), this.fireProgram, this.fire);
+    // const actor7 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor7);
     // mat4.translate(actor7.model, actor7.model, [0, 240, 0]);
   }
@@ -170,6 +172,20 @@ export class Application {
     this.grass = {
     };
 
+    this.smoke = {
+      texture: this.smokeTexture,
+      animationParameters: {
+        frames: 45,
+        rows: 7,
+        cols: 7,
+        fps: -10
+      },
+      period: 10,
+      sizeValues: [20, 300],
+      sizeEasing: [0.65, 1.64, 1.16, 1.27],
+      alphaEasing: [0.1, 10, 0.22, 2.27]
+    };
+
     this.fire = {
       texture: this.smokeTexture,
       animationParameters: {
@@ -185,7 +201,8 @@ export class Application {
     this.canopyProgram = new CanopyProgram(gl);
     this.waterProgram = new WaterProgram(gl);
     this.grassProgram = new GrassProgram(gl);
-    this.fireProgram = new FireProgram(gl);
+    this.smokeProgram = new SmokeProgram(gl);
+    this.spriteProgram = new SpriteProgram(gl);
 
     // Meshes
     const pttbn = layouts.PTTBN(gl);
@@ -272,15 +289,30 @@ export class Application {
       1, 3, 2
     ]).buffer);
 
-    this.fireMesh = new Mesh(gl, layouts.PO, new Float32Array([
-      0, 0, 0.0, -0.5, -0.5,
-      0, 0, 0.0,  0.5, -0.5,
-      0, 0, 0.0, -0.5,  0.5,
-      0, 0, 0.0,  0.5,  0.5
-    ]).buffer, new Uint16Array([
-      0, 1, 2,
-      1, 3, 2
-    ]).buffer);
+    const smokeParticles = 100;
+    const smokeVertexData: number[] = [];
+    const smokeIndexData: number[] = [];
+    for (let i = 0; i < smokeParticles; ++i) {
+      const r0 = Math.random();
+      const r1 = Math.random();
+      const r2 = Math.random();
+      const r3 = Math.random();
+
+      smokeVertexData.push(
+        0, 0, 0.0, -0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 0.0,  0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 0.0, -0.5,  0.5, r0, r1, r2, r3,
+        0, 0, 0.0,  0.5,  0.5, r0, r1, r2, r3
+      );
+
+      const baseVertex =  i * 4;
+
+      smokeIndexData.push(
+        baseVertex + 0, baseVertex + 1, baseVertex + 2,
+        baseVertex + 1, baseVertex + 3, baseVertex + 2
+      );
+    }
+    this.smokeGeometry = new Mesh(gl, layouts.POR, new Float32Array(smokeVertexData).buffer, new Uint16Array(smokeIndexData).buffer).slice(0, smokeParticles * 6);
 
     // We are done
     this.initialized = true;
@@ -343,7 +375,7 @@ export class Application {
     this.canopyMesh.dispose(gl);
     this.waterMesh.dispose(gl);
     this.grassMesh.dispose(gl);
-    this.fireMesh.dispose(gl);
+    //this.smokeMesh.dispose(gl);
   }
 
   private updateFrameUniforms(gl: WebGLRenderingContext, program: Program) {

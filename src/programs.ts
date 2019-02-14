@@ -344,10 +344,8 @@ export class WaterProgram extends MaterialProgram {
       // uniform float u_wind_angle;
       // uniform float u_wind_speed;
       
-      const float u_resolution = 38.21851414253662;//9.554628535634155;//0.5971642835598172;
+      const float u_resolution = 1.1943285668550503;//38.21851414253662;//9.554628535634155;//0.5971642835598172;
       const vec3 u_light_dir = normalize(vec3(1.0, 1.0, 1.0));
-      const float u_wind_angle = 0.0;
-      const float u_wind_speed = 100.0;
 
       const vec3 albedo = vec3(25.0, 72.0, 75.0) / 255.0;
       const vec3 sun = vec3(1.0, 1.0, 0.8);
@@ -381,6 +379,7 @@ export class WaterProgram extends MaterialProgram {
       float sampleCell(vec2 pos, vec2 cell, float cellSide) {
         float windAngle = u_wind[0] + (rand6(cell) - 0.5) * PI / 4.0;
         vec2 velocity = (1.0 + 0.2 * rand4(cell)) * vec2(cos(-windAngle), sin(-windAngle)) * u_wind[1];
+        velocity *= 0.01;
 
         float phase = u_time / 3.0 + rand5(cell);
         float intensityFactor = 1.0 - pow(max(cos(2.0 * PI * phase), 0.0), 2.0);
@@ -413,7 +412,7 @@ export class WaterProgram extends MaterialProgram {
       }
 
       float getHeight(vec2 pos) {
-        return getPartialHeight(pos, 500.0);
+        return getPartialHeight(pos, 20.0);
       }
 
       void main() {
@@ -657,7 +656,177 @@ export class GrassProgram extends MaterialProgram {
 
 
 
-export class FireProgram extends MaterialProgram {
+export class SmokeProgram extends MaterialProgram {
+  private modelLocation: WebGLUniformLocation;
+  private viewLocation: WebGLUniformLocation;
+  private projectLocation: WebGLUniformLocation;
+  private timeLocation: WebGLUniformLocation;
+  private textureLocation: WebGLUniformLocation;
+  private animationParametersLocation: WebGLUniformLocation;
+  private frameSizeLocation: WebGLUniformLocation;
+  private windLocation: WebGLUniformLocation;
+  private periodLocation: WebGLUniformLocation;
+  private sizeValuesLocation: WebGLUniformLocation;
+  private sizeEasingLocation: WebGLUniformLocation;
+  private alphaEasingLocation: WebGLUniformLocation;
+
+  constructor(gl: WebGLRenderingContext) {
+    super(gl, `
+      precision mediump float;
+
+      attribute vec4 a_position;
+      attribute vec2 a_offset;
+      attribute vec4 a_random;
+
+      uniform mat4 u_model;
+      uniform mat4 u_view;
+      uniform mat4 u_project;
+      uniform float u_time;
+      uniform vec4 u_animation_parameters;
+      uniform vec2 u_frame_size;
+      uniform vec2 u_wind;
+      uniform float u_period;
+      uniform vec2 u_size_values;
+      uniform vec4 u_size_easing;
+      uniform vec4 u_alpha_easing;
+
+      varying vec2 v_offset;
+      varying vec2 v_frame_coords;
+      varying vec4 v_tint;
+
+      const float PI = 3.14159;
+
+      float clamper(float v) {
+        return clamp(v, 0.0, 0.5);
+      }
+
+      float factor(float v) {
+        return 0.5 * cos(2.0 * PI * clamper(v)) + 0.5;
+      }
+
+      float easing(float x, vec4 abcd) {
+        return factor(-(x - abcd[0]) * abcd[1] / 2.0) * factor((x - abcd[2]) * abcd[3] / 2.0);
+      }
+
+      float ease1(float x, float y, float t, vec4 abcd) {
+        float f = easing(t, abcd);
+        return mix(x, y, f);
+      }
+
+      vec2 ease2(vec2 x, vec2 y, float t, vec4 abcd) {
+        float f = easing(t, abcd);
+        return mix(x, y, f);
+      }
+
+      void main(void) {
+        vec4 random = a_random;
+        float phase = mod(u_time / u_period + random.z, 1.0);
+        
+        float alpha = ease1(0.0, 1.0, phase, u_alpha_easing);
+        float size = ease1(u_size_values[0], u_size_values[1], phase, u_size_easing);
+
+        mat4 viewModel = u_view * u_model;
+        gl_Position = u_project * viewModel * a_position;
+        gl_Position.xy += 2.0 * (a_offset * size / u_frame_size) * gl_Position.w;
+        float windAngle = u_wind[0] + (random.y - 0.5) * PI / 8.0;
+        gl_Position.xy += phase * u_wind[1] * vec2(cos(-windAngle), sin(-windAngle));
+        v_offset = a_offset;
+        v_tint = vec4(1.0, 1.0, 1.0, alpha);
+
+        // Animation frame
+        float frame = mod(floor(u_time * u_animation_parameters[3] + random.y * u_animation_parameters[0]), u_animation_parameters[0]);
+        float bs = 1.0 / u_animation_parameters[1];
+        float bt = 1.0 / u_animation_parameters[2];
+        float is = mod(frame, u_animation_parameters[1]);
+        float it = floor(frame / u_animation_parameters[2]);
+        // v_frame_coords = vec2(is * bs, it * bt);
+        v_frame_coords = vec2(is * bs, 1.0 - (1.0 + it) * bt);
+        //v_frame_coords = vec2(0.0, 0.0);
+      }
+    `, `
+      precision mediump float;
+
+      uniform sampler2D u_texture;
+      uniform vec4 u_animation_parameters;
+      
+      varying vec2 v_offset;
+      varying vec2 v_frame_coords;
+      varying vec4 v_tint;
+      
+      const float PI = 3.14159;
+      
+      void main() {
+          vec2 baseUV = v_offset + 0.5;
+          vec4 color = texture2D(u_texture, baseUV / u_animation_parameters.yz + v_frame_coords);
+          color *= v_tint;
+          color.rgb *= color.a;
+          gl_FragColor = color;
+          // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+      }
+    `, {
+      "a_position": 0,
+      "a_offset": 1,
+      "a_random": 2
+    });
+
+    this.modelLocation = this.getUniformLocation(gl, "u_model");
+    this.viewLocation = this.getUniformLocation(gl, "u_view");
+    this.projectLocation = this.getUniformLocation(gl, "u_project");
+    this.timeLocation = this.getUniformLocation(gl, "u_time");
+    this.textureLocation = this.getUniformLocation(gl, "u_texture");
+    this.animationParametersLocation = this.getUniformLocation(gl, "u_animation_parameters");
+    this.frameSizeLocation = this.getUniformLocation(gl, "u_frame_size");
+    this.windLocation = this.getUniformLocation(gl, "u_wind");
+    this.periodLocation = this.getUniformLocation(gl, "u_period");
+    this.sizeValuesLocation = this.getUniformLocation(gl, "u_size_values");
+    this.sizeEasingLocation = this.getUniformLocation(gl, "u_size_easing");
+    this.alphaEasingLocation = this.getUniformLocation(gl, "u_alpha_easing");
+  }
+
+  updateView(gl: WebGLRenderingContext, view: mat4) {
+    gl.uniformMatrix4fv(this.viewLocation, false, view);
+  }
+
+  updateModel(gl: WebGLRenderingContext, model: mat4) {
+    gl.uniformMatrix4fv(this.modelLocation, false, model);
+  }
+
+  updateProject(gl: WebGLRenderingContext, project: mat4) {
+    gl.uniformMatrix4fv(this.projectLocation, false, project);
+  }
+
+  updateTime(gl: WebGLRenderingContext, time: number) {
+    gl.uniform1f(this.timeLocation, time);
+  }
+
+  updateFrameSize(gl: WebGLRenderingContext, width: number, height: number) {
+    gl.uniform2f(this.frameSizeLocation, width, height);
+  }
+
+  updateWind(gl: WebGLRenderingContext, angle: number, speed: number) {
+    gl.uniform2f(this.windLocation, angle, speed);
+  }
+
+  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+    gl.uniform4f(this.animationParametersLocation,
+      material.animationParameters.frames,
+      material.animationParameters.rows,
+      material.animationParameters.cols,
+      material.animationParameters.fps
+    );
+
+    gl.uniform1f(this.periodLocation, material.period);
+    gl.uniform2fv(this.sizeValuesLocation, material.sizeValues);
+    gl.uniform4fv(this.sizeEasingLocation, material.sizeEasing);
+    gl.uniform4fv(this.alphaEasingLocation, material.alphaEasing);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, material.texture);
+    gl.uniform1i(this.textureLocation, 0);
+  }
+}
+
+export class SpriteProgram extends MaterialProgram {
   private modelLocation: WebGLUniformLocation;
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
@@ -682,24 +851,20 @@ export class FireProgram extends MaterialProgram {
 
       varying vec2 v_offset;
       varying vec2 v_frame_coords;
-      
-      const float PARTICLE_SIZE = 100.0;
 
       void main(void) {
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
-        gl_Position.xy += 2.0 * (a_offset * PARTICLE_SIZE / u_frame_size) * gl_Position.w;
+        gl_Position.xy += 2.0 * (a_offset * 100.0 / u_frame_size) * gl_Position.w;
         v_offset = a_offset;
 
         // Animation frame
-        float frame = mod(floor(u_time * u_animation_parameters[3] + (0.0 /*RANDOM*/) * u_animation_parameters[0]), u_animation_parameters[0]);
+        float frame = mod(floor(u_time * u_animation_parameters[3]), u_animation_parameters[0]);
         float bs = 1.0 / u_animation_parameters[1];
         float bt = 1.0 / u_animation_parameters[2];
         float is = mod(frame, u_animation_parameters[1]);
         float it = floor(frame / u_animation_parameters[2]);
-        // v_frame_coords = vec2(is * bs, it * bt);
         v_frame_coords = vec2(is * bs, 1.0 - (1.0 + it) * bt);
-        //v_frame_coords = vec2(0.0, 0.0);
       }
     `, `
       precision mediump float;
@@ -709,17 +874,12 @@ export class FireProgram extends MaterialProgram {
       
       varying vec2 v_offset;
       varying vec2 v_frame_coords;
-      //varying vec4 v_tint;
-      
-      const float PI = 3.14159;
       
       void main() {
           vec2 baseUV = v_offset + 0.5;
           vec4 color = texture2D(u_texture, baseUV / u_animation_parameters.yz + v_frame_coords);
-          //color *= v_tint;
           color.rgb *= color.a;
           gl_FragColor = color;
-          // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
       }
     `, {
       "a_position": 0,
@@ -769,4 +929,4 @@ export class FireProgram extends MaterialProgram {
   }
 }
 
-export type Program = StandardProgram | CanopyProgram | WaterProgram | GrassProgram | FireProgram;
+export type Program = StandardProgram | CanopyProgram | WaterProgram | GrassProgram | SmokeProgram | SpriteProgram;
