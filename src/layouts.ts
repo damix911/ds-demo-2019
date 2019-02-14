@@ -9,6 +9,36 @@ export interface IAttribute {
 
 export type VertexLayout = (gl: WebGLRenderingContext) => IAttribute[];
 
+export const P = (gl: WebGLRenderingContext) => [
+  {
+    name: "a_position",
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 12,
+    offset: 0
+  }
+];
+
+export const PO = (gl: WebGLRenderingContext) => [
+  {
+    name: "a_position",
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 20,
+    offset: 0
+  },
+  {
+    name: "a_offset",
+    size: 2,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 20,
+    offset: 12
+  }
+];
+
 export const PTTBNOR = (gl: WebGLRenderingContext) => [
   {
     name: "a_position",

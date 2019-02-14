@@ -15,6 +15,7 @@
     }
   </style>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.5/dat.gui.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
   <link rel="stylesheet" href="https://jsdev.arcgis.com/4.11/esri/themes/light/main.css">
   <script src="https://jsdev.arcgis.com/4.11/"></script>
@@ -58,6 +59,7 @@
             return;
           }
 
+          this.app.setWind(Math.PI * this.layer.windAngle / 180, this.layer.windSpeed);
           this.app.setView(renderParameters.state.center, renderParameters.state.rotation, renderParameters.state.resolution);
           this.app.render(renderParameters.context);
           this.requestRender();
@@ -65,6 +67,16 @@
       });
 
       var CustomLayer = Layer.createSubclass({
+        properties: {
+          windAngle: Number,
+          windSpeed: Number
+        },
+
+        constructor() {
+          this.windAngle = 0;
+          this.windSpeed = 100;
+        },
+
         createLayerView: function(view) {
           if (view.type === "2d") {
             return new CustomLayerView2D({
@@ -86,10 +98,11 @@
         container: "viewDiv",
         map: map,
         center: [
-          -94.6738513,
-           38.5107655
+          -94.673,
+           38.506
         ],
-        zoom: 18
+        // zoom: 17
+        zoom: 17
         // center: [-94.675099, 38.505984],
         // zoom: 15
       });
@@ -97,6 +110,12 @@
       view.on("click", function (evt) {
         console.log(JSON.stringify({x: evt.mapPoint.x, y: evt.mapPoint.y}));
       });
+
+      var gui = new dat.GUI({
+        height: 5 * 32 - 1
+      });
+      gui.add(layer, "windSpeed");
+      gui.add(layer, "windAngle");
     });
   </script>
 </head>

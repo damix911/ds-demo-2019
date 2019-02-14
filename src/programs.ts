@@ -222,7 +222,7 @@ export class CanopyProgram extends MaterialProgram {
           v_normal = -v_normal;
         }
 
-        v_darken = 0.5 + 0.5 * r;
+        v_darken = 1.0;//0.8 + 0.2 * r;
         
         v_random = a_random;
       }
@@ -305,115 +305,147 @@ export class CanopyProgram extends MaterialProgram {
   }
 }
 
-export type Program = StandardProgram | CanopyProgram;
-
-/*
-export class ForestProgram implements IProgram {
-  private program: WebGLProgram;
+export class WaterProgram extends MaterialProgram {
   private modelLocation: WebGLUniformLocation;
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
-  private textureLocation: WebGLUniformLocation;
+  private wavesLocation: WebGLUniformLocation;
+  private windLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
-    this.program = createProgram(gl, `
+    super(gl, `
       precision mediump float;
 
       attribute vec4 a_position;
-      attribute vec2 a_texcoord;
-      attribute vec3 a_normal;
 
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
-      uniform float u_time;
 
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_normal;
-
+      varying vec2 v_position;
+      
       void main(void) {
-        // Animation
-        float h = a_texcoord.y;
-        vec4 position = a_position + vec4(h * h * 0.1 * cos(u_time * 2.0), 0.0, 0.0, 0.0);
-
-
-
-
-
-
-
         mat4 viewModel = u_view * u_model;
-        mat3 viewModel3 = mat3(viewModel);
+        gl_Position = u_project * viewModel * a_position;
 
-        gl_Position = u_project * viewModel * position;
-        
-        v_texcoord = a_texcoord;
-
-
-
-
-        
-
-
-        
-
-        v_eye = -(viewModel * a_position).xyz;
-        v_normal = viewModel3 * a_normal;
-
-        if (dot(v_eye, v_normal) < 0.0) {
-          v_normal = -v_normal;
-        }
+        v_position = a_position.xy;
       }
     `, `
-      precision mediump float;
+      precision highp float;
 
-      uniform sampler2D u_texture;
+      varying vec2 v_position;
+      
+      uniform float u_time;
+      uniform sampler2D u_waves;
+      uniform vec2 u_wind;
+      // uniform float u_resolution;
+      // uniform vec3 u_light_dir;
+      // uniform float u_wind_angle;
+      // uniform float u_wind_speed;
+      
+      const float u_resolution = 38.21851414253662;//9.554628535634155;//0.5971642835598172;
+      const vec3 u_light_dir = normalize(vec3(1.0, 1.0, 1.0));
+      const float u_wind_angle = 0.0;
+      const float u_wind_speed = 100.0;
 
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_normal;
+      const vec3 albedo = vec3(25.0, 72.0, 75.0) / 255.0;
+      const vec3 sun = vec3(1.0, 1.0, 0.8);
+      const vec3 view = vec3(0.0, 0.0, 1.0);
+      const float PI = 3.14159;
 
-      void main(void) {
-        vec4 color = texture2D(u_texture, v_texcoord);
-        //color.rgb *= color.a;
-        if (color.a < 0.9) {
-          discard;
+      float rand1(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
+      }
+
+      float rand2(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 78.233))) * 43758.5453);
+      }
+
+      float rand3(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 109.66))) * 43758.5453);
+      }
+
+      float rand4(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 263.73))) * 43758.5453);
+      }
+
+      float rand5(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 446.15))) * 43758.5453);
+      }
+
+      float rand6(vec2 n) {
+        return fract(sin(dot(n, vec2(12.9898, 521.64))) * 43758.5453);
+      }
+
+      float sampleCell(vec2 pos, vec2 cell, float cellSide) {
+        float windAngle = u_wind[0] + (rand6(cell) - 0.5) * PI / 4.0;
+        vec2 velocity = (1.0 + 0.2 * rand4(cell)) * vec2(cos(-windAngle), sin(-windAngle)) * u_wind[1];
+
+        float phase = u_time / 3.0 + rand5(cell);
+        float intensityFactor = 1.0 - pow(max(cos(2.0 * PI * phase), 0.0), 2.0);
+
+        vec2 source = cell * cellSide + cellSide * vec2(rand1(cell), rand2(cell)) + velocity * mod(phase, 1.0);
+        vec2 uv = (pos - source) / cellSide;
+
+        float c = cos(windAngle - 1.0);
+        float s = sin(windAngle - 1.0);
+        uv = mat2(c, s, -s, c) * uv;
+        uv += 0.5;
+
+        float heightFactor = texture2D(u_waves, uv).r;
+        float distanceFactor = exp(-2.0 * length(pos - source) / cellSide);
+
+        return heightFactor * distanceFactor * intensityFactor;
+      }
+
+      float getPartialHeight(vec2 pos, float cellSide) {
+        vec2 cell = floor(v_position / cellSide);
+        float s = 0.0;
+
+        for (int i = -2; i <= 2; ++i) {
+          for (int j = -2; j <= 2; ++j) {
+            s += 0.5 * sampleCell(pos, cell + vec2(i, j), cellSide);
+          }
         }
 
-        vec3 normal = v_normal;
-        vec3 eye = normalize(v_eye);
-        
-        vec3 light = eye;
-        //vec3 light = vec3(0.0, 1.0, 0.0);
+        return s;
+      }
 
-        float d = clamp(dot(normal, light), 0.0, 1.0);
-        float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
+      float getHeight(vec2 pos) {
+        return getPartialHeight(pos, 500.0);
+      }
 
-        // gl_FragColor = vec4(vec3(0.3 + 0.3 * d + 0.4 * s), 1.0);
+      void main() {
+          float step = u_resolution;
 
+          float hL = getHeight(v_position + vec2(-step, 0.0));
+          float hR = getHeight(v_position + vec2(+step, 0.0));
+          float hU = getHeight(v_position + vec2(0.0, -step));
+          float hD = getHeight(v_position + vec2(0.0, +step));
+          float dx = hR - hL;
+          float dy = hU - hD;
 
-        
-        
+          vec3 normal = normalize(vec3(-dx, -dy, 0.5));
+          vec3 r = reflect(-u_light_dir, normal);
+          float fresnel = 1.0 - dot(normal, view);
+          float s = pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
+          vec3 waterColor = albedo + s * sun;
+          gl_FragColor = vec4(waterColor, 1.0);
 
-        gl_FragColor = color;
+          // gl_FragColor = texture2D(u_waves, v_position / 5000.0);
+          // gl_FragColor = vec4(getHeight(v_position), 0.0, 0.0, 1.0);
       }
     `, {
-      "a_position": 0,
-      "a_texcoord": 1,
-      "a_normal": 2
+      "a_position": 0
     });
 
-    this.modelLocation = gl.getUniformLocation(this.program, "u_model");
-    this.viewLocation = gl.getUniformLocation(this.program, "u_view");
-    this.projectLocation = gl.getUniformLocation(this.program, "u_project");
-    this.timeLocation = gl.getUniformLocation(this.program, "u_time");
-    this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
-  }
-
-  use(gl: WebGLRenderingContext) {
-    gl.useProgram(this.program);
+    this.modelLocation = this.getUniformLocation(gl, "u_model");
+    this.viewLocation = this.getUniformLocation(gl, "u_view");
+    this.projectLocation = this.getUniformLocation(gl, "u_project");
+    this.timeLocation = this.getUniformLocation(gl, "u_time");
+    this.wavesLocation = this.getUniformLocation(gl, "u_waves");
+    this.windLocation = this.getUniformLocation(gl, "u_wind");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -432,121 +464,53 @@ export class ForestProgram implements IProgram {
     gl.uniform1f(this.timeLocation, time);
   }
 
-  updateTexture(gl: WebGLRenderingContext, unit: number) {
-    gl.uniform1i(this.textureLocation, unit);
+  updateWind(gl: WebGLRenderingContext, angle: number, speed: number) {
+    gl.uniform2f(this.windLocation, angle, speed);
+  }
+
+  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, material.waves);
+    gl.uniform1i(this.wavesLocation, 0);
   }
 }
 
-
-
-
-
-export class CanopyProgram implements IProgram {
-  private program: WebGLProgram;
+export class GrassProgram extends MaterialProgram {
   private modelLocation: WebGLUniformLocation;
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
-  private textureLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
-    this.program = createProgram(gl, `
+    super(gl, `
       precision mediump float;
 
       attribute vec4 a_position;
-      attribute vec2 a_texcoord;
-      attribute vec3 a_normal;
 
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
-      uniform float u_time;
-
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_normal;
-
+      
       void main(void) {
-        // Animation
-        float h = a_texcoord.y;
-        vec4 position = a_position + vec4(h * h * 0.1 * cos(u_time * 2.0), 0.0, 0.0, 0.0);
-
-
-
-
-
-
-
         mat4 viewModel = u_view * u_model;
-        mat3 viewModel3 = mat3(viewModel);
-
-        gl_Position = u_project * viewModel * position;
-        
-        v_texcoord = a_texcoord;
-
-
-
-
-        
-
-
-        
-
-        v_eye = -(viewModel * a_position).xyz;
-        v_normal = viewModel3 * a_normal;
-
-        if (dot(v_eye, v_normal) < 0.0) {
-          v_normal = -v_normal;
-        }
+        gl_Position = u_project * viewModel * a_position;
       }
     `, `
       precision mediump float;
 
-      uniform sampler2D u_texture;
-
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_normal;
-
-      void main(void) {
-        vec4 color = texture2D(u_texture, v_texcoord);
-        //color.rgb *= color.a;
-        if (color.a < 0.9) {
-          discard;
-        }
-
-        vec3 normal = v_normal;
-        vec3 eye = normalize(v_eye);
-        
-        vec3 light = eye;
-        //vec3 light = vec3(0.0, 1.0, 0.0);
-
-        float d = clamp(dot(normal, light), 0.0, 1.0);
-        float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
-
-        // gl_FragColor = vec4(vec3(0.3 + 0.3 * d + 0.4 * s), 1.0);
-
-
-        
-        
-
-        gl_FragColor = color;
+      uniform float u_time;
+      
+      void main() {
+        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
       }
     `, {
-      "a_position": 0,
-      "a_texcoord": 1,
-      "a_normal": 2
+      "a_position": 0
     });
 
-    this.modelLocation = gl.getUniformLocation(this.program, "u_model");
-    this.viewLocation = gl.getUniformLocation(this.program, "u_view");
-    this.projectLocation = gl.getUniformLocation(this.program, "u_project");
-    this.timeLocation = gl.getUniformLocation(this.program, "u_time");
-    this.textureLocation = gl.getUniformLocation(this.program, "u_texture");
-  }
-
-  use(gl: WebGLRenderingContext) {
-    gl.useProgram(this.program);
+    this.modelLocation = this.getUniformLocation(gl, "u_model");
+    this.viewLocation = this.getUniformLocation(gl, "u_view");
+    this.projectLocation = this.getUniformLocation(gl, "u_project");
+    this.timeLocation = this.getUniformLocation(gl, "u_time");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -565,8 +529,244 @@ export class CanopyProgram implements IProgram {
     gl.uniform1f(this.timeLocation, time);
   }
 
-  updateTexture(gl: WebGLRenderingContext, unit: number) {
-    gl.uniform1i(this.textureLocation, unit);
+  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
   }
 }
-*/
+
+
+
+// precision mediump float;
+
+// attribute vec2 a_position;
+// attribute vec2 a_offset;
+// attribute vec4 a_random;
+// attribute vec2 a_timespan;
+
+// uniform vec4 u_tint;
+// uniform mat3 u_transform;
+// uniform mat3 u_display;
+// uniform float u_current_time;
+// uniform vec4 u_random;
+// uniform vec2 u_velocity;
+// uniform vec4 u_animation_parameters;
+// uniform float u_radius;
+// uniform float u_size;
+// uniform float u_period;
+// uniform float u_expansion_speed;
+// uniform vec4 u_life_parameters;
+
+// uniform vec2 u_size_values;
+// uniform vec4 u_size_easing;
+// uniform vec4 u_alpha_easing;
+// uniform vec4 u_light_easing;
+// uniform vec4 u_velocity_vectors;
+// uniform vec4 u_velocity_easing;
+// uniform vec4 u_life_easing;
+
+// const float PI = 3.14159;
+
+// varying vec2 v_offset;
+// varying vec2 v_frame_coords;
+// varying vec4 v_tint;
+
+// float clamper(float v) {
+//   return clamp(v, 0.0, 0.5);
+// }
+
+// float factor(float v) {
+//   return 0.5 * cos(2.0 * PI * clamper(v)) + 0.5;
+// }
+
+// float easing(float x, vec4 abcd) {
+//   return factor(-(x - abcd[0]) * abcd[1] / 2.0) * factor((x - abcd[2]) * abcd[3] / 2.0);
+// }
+
+// float ease1(float x, float y, float t, vec4 abcd) {
+//   float f = easing(t, abcd);
+//   return mix(x, y, f);
+// }
+
+// vec2 ease2(vec2 x, vec2 y, float t, vec4 abcd) {
+//   float f = easing(t, abcd);
+//   return mix(x, y, f);
+// }
+
+// void main() {
+//   vec4 random = mod(a_random + u_random, 1.0);
+//   float phase = mod(u_current_time / u_period + random.z, 1.0);
+//   float life_time = clamp((u_current_time - a_timespan[0]) / (a_timespan[1] - a_timespan[0]), 0.0, 1.0);
+
+//   // if (life_time == 0.0 || life_time == 1.0) {
+//   //   gl_Position.z = -2.0;
+//   //   return;
+//   // }
+
+//   float size = ease1(u_size_values[0], u_size_values[1], phase, u_size_easing);
+//   float alpha = ease1(0.0, 1.0, phase, u_alpha_easing);
+//   float light = ease1(0.0, 1.0, phase, u_light_easing);
+//   vec2 velocity = ease2(u_velocity_vectors.xy, u_velocity_vectors.zw, phase, u_velocity_easing);
+
+
+
+
+//   gl_Position.xy = (u_display * (u_transform * vec3(a_position + a_offset * size + velocity * phase, 1.0))).xy;
+//   gl_Position.zw = vec2(0.0, 1.0);
+
+//   // Tint
+//   v_tint = vec4(vec3(light), alpha) * u_tint;
+//   v_tint.a *= ease1(0.0, 1.0, life_time, u_life_easing);
+
+//   // Offset
+//   v_offset = a_offset;
+
+//   // Animation frame
+//   float frame = mod(floor(-u_current_time * u_animation_parameters[3] + random.w * u_animation_parameters[0]), u_animation_parameters[0]);
+//   float bs = 1.0 / u_animation_parameters[1];
+//   float bt = 1.0 / u_animation_parameters[2];
+//   float is = mod(frame, u_animation_parameters[1]);
+//   float it = floor(frame / u_animation_parameters[2]);
+//   v_frame_coords = vec2(is * bs, it * bt);
+
+//   /*
+//   float life_time = clamp((u_current_time - a_timespan[0]) / (a_timespan[1] - a_timespan[0]), 0.0, 1.0);
+//   float life = 1.0 - pow(max(0.0, cos(u_life_parameters[0] * (life_time + u_life_parameters[1]) * 2.0 * 3.14159)), u_life_parameters[2]);
+//   vec4 random = mod(a_random + u_random, 1.0);
+//   float phase = u_current_time / u_period + random.z;
+//   v_alpha = 1.0 - pow(max(cos(2.0 * PI * phase), 0.0), 10.0);
+//   v_alpha *= life;
+//   phase = mod(phase, 1.0);
+//   float local_time = phase * u_period;
+//   vec2 displacement = 2.0 * (random.xy - 0.5) * u_radius;
+//   vec2 velocity = u_velocity + 2.0 * (random.xy - 0.5) * u_expansion_speed;
+//   vec2 move = a_offset * u_size + displacement + velocity * local_time;
+//   // gl_Position.xy = (u_display * (u_transform * vec3(a_position, 1.0) + vec3(move, 0.0))).xy;
+//   gl_Position.xy = (u_display * (u_transform * vec3(a_position + move, 1.0))).xy;
+//   gl_Position.zw = vec2(0.0, 1.0);
+//   v_offset = a_offset;
+//   float frame = mod(floor(-u_current_time * u_animation_parameters[3] + random.w * u_animation_parameters[0]), u_animation_parameters[0]);
+//   float bs = 1.0 / u_animation_parameters[1];
+//   float bt = 1.0 / u_animation_parameters[2];
+//   float is = mod(frame, u_animation_parameters[1]);
+//   float it = floor(frame / u_animation_parameters[2]);
+//   v_frame_coords = vec2(is * bs, it * bt);
+//   */
+// }
+
+
+
+
+
+
+export class FireProgram extends MaterialProgram {
+  private modelLocation: WebGLUniformLocation;
+  private viewLocation: WebGLUniformLocation;
+  private projectLocation: WebGLUniformLocation;
+  private timeLocation: WebGLUniformLocation;
+  private textureLocation: WebGLUniformLocation;
+  private animationParametersLocation: WebGLUniformLocation;
+  private frameSizeLocation: WebGLUniformLocation;
+
+  constructor(gl: WebGLRenderingContext) {
+    super(gl, `
+      precision mediump float;
+
+      attribute vec4 a_position;
+      attribute vec2 a_offset;
+
+      uniform mat4 u_model;
+      uniform mat4 u_view;
+      uniform mat4 u_project;
+      uniform float u_time;
+      uniform vec4 u_animation_parameters;
+      uniform vec2 u_frame_size;
+
+      varying vec2 v_offset;
+      varying vec2 v_frame_coords;
+      
+      const float PARTICLE_SIZE = 100.0;
+
+      void main(void) {
+        mat4 viewModel = u_view * u_model;
+        gl_Position = u_project * viewModel * a_position;
+        gl_Position.xy += 2.0 * (a_offset * PARTICLE_SIZE / u_frame_size) * gl_Position.w;
+        v_offset = a_offset;
+
+        // Animation frame
+        float frame = mod(floor(u_time * u_animation_parameters[3] + (0.0 /*RANDOM*/) * u_animation_parameters[0]), u_animation_parameters[0]);
+        float bs = 1.0 / u_animation_parameters[1];
+        float bt = 1.0 / u_animation_parameters[2];
+        float is = mod(frame, u_animation_parameters[1]);
+        float it = floor(frame / u_animation_parameters[2]);
+        // v_frame_coords = vec2(is * bs, it * bt);
+        v_frame_coords = vec2(is * bs, 1.0 - (1.0 + it) * bt);
+        //v_frame_coords = vec2(0.0, 0.0);
+      }
+    `, `
+      precision mediump float;
+
+      uniform sampler2D u_texture;
+      uniform vec4 u_animation_parameters;
+      
+      varying vec2 v_offset;
+      varying vec2 v_frame_coords;
+      //varying vec4 v_tint;
+      
+      const float PI = 3.14159;
+      
+      void main() {
+          vec2 baseUV = v_offset + 0.5;
+          vec4 color = texture2D(u_texture, baseUV / u_animation_parameters.yz + v_frame_coords);
+          //color *= v_tint;
+          color.rgb *= color.a;
+          gl_FragColor = color;
+          // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+      }
+    `, {
+      "a_position": 0,
+      "a_offset": 1
+    });
+
+    this.modelLocation = this.getUniformLocation(gl, "u_model");
+    this.viewLocation = this.getUniformLocation(gl, "u_view");
+    this.projectLocation = this.getUniformLocation(gl, "u_project");
+    this.timeLocation = this.getUniformLocation(gl, "u_time");
+    this.textureLocation = this.getUniformLocation(gl, "u_texture");
+    this.animationParametersLocation = this.getUniformLocation(gl, "u_animation_parameters");
+    this.frameSizeLocation = this.getUniformLocation(gl, "u_frame_size");
+  }
+
+  updateView(gl: WebGLRenderingContext, view: mat4) {
+    gl.uniformMatrix4fv(this.viewLocation, false, view);
+  }
+
+  updateModel(gl: WebGLRenderingContext, model: mat4) {
+    gl.uniformMatrix4fv(this.modelLocation, false, model);
+  }
+
+  updateProject(gl: WebGLRenderingContext, project: mat4) {
+    gl.uniformMatrix4fv(this.projectLocation, false, project);
+  }
+
+  updateTime(gl: WebGLRenderingContext, time: number) {
+    gl.uniform1f(this.timeLocation, time);
+  }
+
+  updateFrameSize(gl: WebGLRenderingContext, width: number, height: number) {
+    gl.uniform2f(this.frameSizeLocation, width, height);
+  }
+
+  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+    gl.uniform4f(this.animationParametersLocation,
+      material.animationParameters.frames,
+      material.animationParameters.rows,
+      material.animationParameters.cols,
+      material.animationParameters.fps
+    );
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, material.texture);
+    gl.uniform1i(this.textureLocation, 0);
+  }
+}
+
+export type Program = StandardProgram | CanopyProgram | WaterProgram | GrassProgram | FireProgram;
