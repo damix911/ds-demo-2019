@@ -151,12 +151,12 @@ export class Application {
     const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
     fire.blendMode = "add";
     this.actors.push(fire);
-    mat4.translate(fire.model, fire.model, [200, -900, 0]);
+    mat4.translate(fire.model, fire.model, [-25, -40, 0]);
 
     const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
     smoke.blendMode = "alpha";
     this.actors.push(smoke);
-    mat4.translate(smoke.model, smoke.model, [200, -900, 0]);
+    mat4.translate(smoke.model, smoke.model, [-25, -40, 0]);
 
     // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor6);
@@ -274,6 +274,17 @@ export class Application {
     ]).buffer);
 
     const trees: {x: number, y: number}[] = [
+      {x: -85, y: -120},
+      {x: -85, y: -40},
+      {x: -115, y: -40},
+      {x: -85, y: -40},
+      {x: -55, y: -20},
+      {x: -115, y: -60},
+      // {x: -85, y: -40},
+      // {x: -85, y: -40},
+      // {x: -85, y: -120},
+      // {x: -85, y: -120},
+      // {x: -85, y: -120}
       // {"x": -10538970.571200622, "y": 4651862.067061024},
       // {"x":-10538977.289298838,"y":4651829.223025421},
       // {"x":-10538975.79638813,"y":4651811.606679063},
@@ -287,41 +298,45 @@ export class Application {
       // {"x":-10539226.157513985,"y":4651715.015356203},
       // {"x":-10539244.669606775,"y":4651727.555806157}
     ];
-    for (let i = 0; i < 5; ++i) {
-      for (let j = 0; j < 5; ++j) {
-        trees.push({"x":-50+(x + i * 20)+200,"y":-50+(y + j * 20)-300});
-      }
-    }
-    const particlesPerTree = 100;
+    // for (let i = 0; i < 1; ++i) {
+    //   for (let j = 0; j < 1; ++j) {
+    //     trees.push({"x":-50+(x + i * 20)+200,"y":-50+(y + j * 20)-300});
+    //   }
+    // }
+    const particlesPerTree = 5;
     this.canopyMesh = createCanopyMesh(gl, trees, particlesPerTree);
     this.canopyGeometry = this.canopyMesh.slice(0, trees.length * particlesPerTree * 6);
 
-    this.waterMesh = new Mesh(gl, layouts.PS, new Float32Array([
-      -50+x-100, -50+y-300, 0.1, 1,
-      50+x-100, -50+y-300, 0.1, 1,
-      -50+x-100,  50+y-300, 0.1, 1,
-      50+x-100,  50+y-300, 0.1, 1,
+    {
+      const x = 0;
+      const y = 0;
+      this.waterMesh = new Mesh(gl, layouts.PS, new Float32Array([
+        -50+x+100, -50+y-300, 0.1, 1,
+        50+x+100, -50+y-300, 0.1, 1,
+        -50+x+100,  50+y-300, 0.1, 1,
+        50+x+100,  50+y-300, 0.1, 1,
 
-      -80+x-100, -80+y-300, 0.1, 0,
-      80+x-100, -80+y-300, 0.1, 0,
-      -80+x-100,  80+y-300, 0.1, 0,
-      80+x-100,  80+y-300, 0.1, 0
-    ]).buffer, new Uint16Array([
-      0, 1, 2,
-      1, 3, 2,
+        -80+x+100, -80+y-300, 0.1, 0,
+        80+x+100, -80+y-300, 0.1, 0,
+        -80+x+100,  80+y-300, 0.1, 0,
+        80+x+100,  80+y-300, 0.1, 0
+      ]).buffer, new Uint16Array([
+        0, 1, 2,
+        1, 3, 2,
 
-      4, 1, 0,
-      4, 5, 1,
+        4, 1, 0,
+        4, 5, 1,
 
-      5, 3, 1,
-      5, 7, 3,
-      
-      7, 2, 3,
-      7, 6, 2,
+        5, 3, 1,
+        5, 7, 3,
+        
+        7, 2, 3,
+        7, 6, 2,
 
-      6, 4, 0,
-      6, 0, 2
-    ]).buffer);
+        6, 4, 0,
+        6, 0, 2
+      ]).buffer);
+    }
 
     this.grassMesh = new Mesh(gl, layouts.PS, new Float32Array([
       x-200, y-490, 0.0, 1,
@@ -360,10 +375,10 @@ export class Application {
       const r3 = Math.random();
 
       smokeVertexData.push(
-        0, 0, 0.0, -0.5, -0.5, r0, r1, r2, r3,
-        0, 0, 0.0,  0.5, -0.5, r0, r1, r2, r3,
-        0, 0, 0.0, -0.5,  0.5, r0, r1, r2, r3,
-        0, 0, 0.0,  0.5,  0.5, r0, r1, r2, r3
+        0, 0, 40.0, -0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 40.0,  0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 40.0, -0.5,  0.5, r0, r1, r2, r3,
+        0, 0, 40.0,  0.5,  0.5, r0, r1, r2, r3
       );
 
       const baseVertex = i * 4;

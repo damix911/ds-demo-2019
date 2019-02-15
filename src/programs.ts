@@ -152,6 +152,7 @@ export class CanopyProgram extends MaterialProgram {
   private diffuseLocation: WebGLUniformLocation;
   private normalLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
+  private windLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
@@ -169,6 +170,7 @@ export class CanopyProgram extends MaterialProgram {
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
+      uniform vec2 u_wind;
 
       varying vec2 v_texcoord;
       varying vec3 v_eye;
@@ -200,10 +202,21 @@ export class CanopyProgram extends MaterialProgram {
         //position.xy += vec2(cos(u_time + r * 10.0), sin(u_time + r * 10.0));
         vec2 xAxis = normalize(vec2(-1.0, 1.0));
         vec2 yAxis = vec2(-xAxis.y, xAxis.x);
-        vec2 dir = xAxis * cos(0.2 * cos(1.7 * u_time + r * 10.0)) + yAxis * sin(0.2 * cos(1.7 * u_time + r * 10.0));
-        position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
-        position.xy += 5.0 * (a_random.xy - 0.5);
-        position.xyz += a_offset;
+        // vec2 dir = xAxis * cos(0.2 * cos(1.7 * u_time + r * 10.0)) + yAxis * sin(0.2 * cos(1.7 * u_time + r * 10.0));
+        // position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
+        // position.xy += 5.0 * (a_random.xy - 0.5);
+
+        float bend = 0.03*(a_position.z / 30.0) * (cos(u_time) + 1.0);
+        position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
+        
+        vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
+        float c = cos(r * 2.0 * 3.1415);
+        float s = sin(r * 2.0 * 3.1415);
+        vec2 rotated_offset = vec2(
+          c * offset.x + s * offset.y,
+         -s * offset.x + c * offset.y
+        );
+        position.xyz += vec3(rotated_offset, a_offset.z);
 
         mat4 viewModel = u_view * u_model;
         mat3 viewModel3 = mat3(viewModel);
@@ -276,6 +289,7 @@ export class CanopyProgram extends MaterialProgram {
     this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
     this.normalLocation = this.getUniformLocation(gl, "u_normal");
     this.timeLocation = this.getUniformLocation(gl, "u_time");
+    this.windLocation = this.getUniformLocation(gl, "u_wind");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -292,6 +306,10 @@ export class CanopyProgram extends MaterialProgram {
 
   updateTime(gl: WebGLRenderingContext, time: number) {
     gl.uniform1f(this.timeLocation, time);
+  }
+
+  updateWind(gl: WebGLRenderingContext, angle: number, speed: number) {
+    gl.uniform2f(this.windLocation, angle, speed);
   }
 
   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
