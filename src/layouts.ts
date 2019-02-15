@@ -20,6 +20,25 @@ export const P = (gl: WebGLRenderingContext) => [
   }
 ];
 
+export const PS = (gl: WebGLRenderingContext) => [
+  {
+    name: "a_position",
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 16,
+    offset: 0
+  },
+  {
+    name: "a_scalar",
+    size: 1,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 16,
+    offset: 12
+  }
+];
+
 export const PO = (gl: WebGLRenderingContext) => [
   {
     name: "a_position",

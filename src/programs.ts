@@ -257,7 +257,7 @@ export class CanopyProgram extends MaterialProgram {
 
         gl_FragColor = vec4(diffuse.rgb * (0.3 + 0.3 * d) + vec3(0.4 * s), diffuse.a);
         gl_FragColor = diffuse;
-        gl_FragColor.rgb *= v_darken;
+        //gl_FragColor.rgb *= v_darken;
         gl_FragColor.rgb *= gl_FragColor.a;
       }
     `, {
@@ -315,26 +315,30 @@ export class WaterProgram extends MaterialProgram {
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
-      precision mediump float;
+      precision highp float;
 
       attribute vec4 a_position;
+      attribute float a_scalar;
 
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
 
       varying vec2 v_position;
+      varying float v_scalar;
       
       void main(void) {
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
 
         v_position = a_position.xy;
+        v_scalar = a_scalar;
       }
     `, `
       precision highp float;
 
       varying vec2 v_position;
+      varying float v_scalar;
       
       uniform float u_time;
       uniform sampler2D u_waves;
@@ -347,7 +351,8 @@ export class WaterProgram extends MaterialProgram {
       const float u_resolution = 1.1943285668550503;//38.21851414253662;//9.554628535634155;//0.5971642835598172;
       const vec3 u_light_dir = normalize(vec3(1.0, 1.0, 1.0));
 
-      const vec3 albedo = vec3(25.0, 72.0, 75.0) / 255.0;
+      const vec3 albedoDeep = vec3(25.0, 72.0, 75.0) / 255.0;
+      const vec3 albedoShallow = vec3(41.0, 113.0, 117.0) / 255.0;
       const vec3 sun = vec3(1.0, 1.0, 0.8);
       const vec3 view = vec3(0.0, 0.0, 1.0);
       const float PI = 3.14159;
@@ -379,7 +384,7 @@ export class WaterProgram extends MaterialProgram {
       float sampleCell(vec2 pos, vec2 cell, float cellSide) {
         float windAngle = u_wind[0] + (rand6(cell) - 0.5) * PI / 4.0;
         vec2 velocity = (1.0 + 0.2 * rand4(cell)) * vec2(cos(-windAngle), sin(-windAngle)) * u_wind[1];
-        velocity *= 0.01;
+        velocity *= 0.1;
 
         float phase = u_time / 3.0 + rand5(cell);
         float intensityFactor = 1.0 - pow(max(cos(2.0 * PI * phase), 0.0), 2.0);
@@ -393,18 +398,20 @@ export class WaterProgram extends MaterialProgram {
         uv += 0.5;
 
         float heightFactor = texture2D(u_waves, uv).r;
-        float distanceFactor = exp(-2.0 * length(pos - source) / cellSide);
+        float distanceFactor = exp(-1.0 * length(pos - source) / cellSide);
 
-        return heightFactor * distanceFactor * intensityFactor;
+        return heightFactor * distanceFactor * intensityFactor * v_scalar;
       }
 
       float getPartialHeight(vec2 pos, float cellSide) {
         vec2 cell = floor(v_position / cellSide);
         float s = 0.0;
 
-        for (int i = -2; i <= 2; ++i) {
-          for (int j = -2; j <= 2; ++j) {
-            s += 0.5 * sampleCell(pos, cell + vec2(i, j), cellSide);
+        const int M = 3;
+
+        for (int i = -M; i <= M; ++i) {
+          for (int j = -M; j <= M; ++j) {
+            s += sampleCell(pos, cell + vec2(i, j), cellSide);
           }
         }
 
@@ -412,7 +419,7 @@ export class WaterProgram extends MaterialProgram {
       }
 
       float getHeight(vec2 pos) {
-        return getPartialHeight(pos, 20.0);
+        return getPartialHeight(pos, 30.0);
       }
 
       void main() {
@@ -429,14 +436,17 @@ export class WaterProgram extends MaterialProgram {
           vec3 r = reflect(-u_light_dir, normal);
           float fresnel = 1.0 - dot(normal, view);
           float s = pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
-          vec3 waterColor = albedo + s * sun;
-          gl_FragColor = vec4(waterColor, 1.0);
+          vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * sun;
+          float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
+          vec4 color = vec4(waterColor * alpha, alpha);
+          gl_FragColor = color;
 
           // gl_FragColor = texture2D(u_waves, v_position / 5000.0);
           // gl_FragColor = vec4(getHeight(v_position), 0.0, 0.0, 1.0);
       }
     `, {
-      "a_position": 0
+      "a_position": 0,
+      "a_scalar": 1
     });
 
     this.modelLocation = this.getUniformLocation(gl, "u_model");
@@ -479,37 +489,59 @@ export class GrassProgram extends MaterialProgram {
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
+  private grassLocation: WebGLUniformLocation;
+  private dirtLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
       precision mediump float;
 
       attribute vec4 a_position;
+      attribute float a_scalar;
 
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
-      
+
+      varying vec2 v_position;
+      varying float v_scalar;
+
       void main(void) {
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
+        v_position = a_position.xy;
+        v_scalar = a_scalar;
       }
     `, `
       precision mediump float;
 
+      varying vec2 v_position;
+      varying float v_scalar;
+
       uniform float u_time;
+      uniform sampler2D u_grass;
+      uniform sampler2D u_dirt;
       
       void main() {
-        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+        vec3 grass = texture2D(u_grass, v_position / 150.0).rgb;
+        vec3 dirt = texture2D(u_dirt, v_position / 150.0).rgb;
+        vec3 mixed = mix(dirt, grass, v_scalar);
+        float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
+        vec4 color = vec4(mixed * alpha, alpha);
+
+        gl_FragColor = color;
       }
     `, {
-      "a_position": 0
+      "a_position": 0,
+      "a_scalar": 1
     });
 
     this.modelLocation = this.getUniformLocation(gl, "u_model");
     this.viewLocation = this.getUniformLocation(gl, "u_view");
     this.projectLocation = this.getUniformLocation(gl, "u_project");
     this.timeLocation = this.getUniformLocation(gl, "u_time");
+    this.grassLocation = this.getUniformLocation(gl, "u_grass");
+    this.dirtLocation = this.getUniformLocation(gl, "u_dirt");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -529,6 +561,13 @@ export class GrassProgram extends MaterialProgram {
   }
 
   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D, material.grass);
+    gl.uniform1i(this.grassLocation, 0);
+
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D, material.dirt);
+    gl.uniform1i(this.dirtLocation, 1);
   }
 }
 
@@ -834,6 +873,7 @@ export class SpriteProgram extends MaterialProgram {
   private textureLocation: WebGLUniformLocation;
   private animationParametersLocation: WebGLUniformLocation;
   private frameSizeLocation: WebGLUniformLocation;
+  private sizeLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
@@ -848,6 +888,7 @@ export class SpriteProgram extends MaterialProgram {
       uniform float u_time;
       uniform vec4 u_animation_parameters;
       uniform vec2 u_frame_size;
+      uniform vec2 u_size;
 
       varying vec2 v_offset;
       varying vec2 v_frame_coords;
@@ -855,7 +896,7 @@ export class SpriteProgram extends MaterialProgram {
       void main(void) {
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
-        gl_Position.xy += 2.0 * (a_offset * 100.0 / u_frame_size) * gl_Position.w;
+        gl_Position.xy += 2.0 * (a_offset * u_size / u_frame_size) * gl_Position.w;
         v_offset = a_offset;
 
         // Animation frame
@@ -893,6 +934,7 @@ export class SpriteProgram extends MaterialProgram {
     this.textureLocation = this.getUniformLocation(gl, "u_texture");
     this.animationParametersLocation = this.getUniformLocation(gl, "u_animation_parameters");
     this.frameSizeLocation = this.getUniformLocation(gl, "u_frame_size");
+    this.sizeLocation = this.getUniformLocation(gl, "u_size");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -922,6 +964,8 @@ export class SpriteProgram extends MaterialProgram {
       material.animationParameters.cols,
       material.animationParameters.fps
     );
+
+    gl.uniform2fv(this.sizeLocation, material.size);
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, material.texture);

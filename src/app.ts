@@ -43,6 +43,7 @@ export class Application {
   private waterMesh: Mesh;
   private grassMesh: Mesh;
   private smokeGeometry: IGeometry;
+  private fireGeometry: IGeometry;
   private diffuseImage: HTMLImageElement;
   private diffuseTexture: WebGLTexture;
   private normalImage: HTMLImageElement;
@@ -53,6 +54,12 @@ export class Application {
   private wavesTexture: WebGLTexture;
   private smokeImage: HTMLImageElement;
   private smokeTexture: WebGLTexture;
+  private grassImage: HTMLImageElement;
+  private grassTexture: WebGLTexture;
+  private dirtImage: HTMLImageElement;
+  private dirtTexture: WebGLTexture;
+  private fireImage: HTMLImageElement;
+  private fireTexture: WebGLTexture;
 
   // Wind
   windAngle: number;
@@ -71,9 +78,12 @@ export class Application {
   async load() {
     this.diffuseImage = await loadImage("assets/60b963f8b67ad2df8c49e82e9ef625fb.jpg");
     this.normalImage = await loadImage("assets/wallbrickmixed256x256_2048x2048_02_nrm2.png");
-    this.leavesImage = await loadImage("assets/leaves.png");
+    this.leavesImage = await loadImage("assets/Tree.png");
     this.wavesImage = await loadImage("assets/000.png");
     this.smokeImage = await loadImage("assets/Smoke45Frames.png");
+    this.grassImage = await loadImage("assets/grass.jpg");
+    this.dirtImage = await loadImage("assets/dirt.png");
+    this.fireImage = await loadImage("assets/13221-v6.jpg");
   }
 
   setWind(windAngle: number, windSpeed: number) {
@@ -121,21 +131,32 @@ export class Application {
   }
 
   private sceneSetup() {
-    const actor1 = new Actor(this.groundMesh.slice(0, 18), this.standardProgram, this.rock);
-    this.actors.push(actor1);
+    // const actor1 = new Actor(this.groundMesh.slice(0, 18), this.standardProgram, this.rock);
+    // this.actors.push(actor1);
 
     const actor2 = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
+    actor2.blendMode = "alpha";
     this.actors.push(actor2);
 
-    const actor3 = new Actor(this.waterMesh.slice(0, 6), this.waterProgram, this.water);
-    this.actors.push(actor3);
+    // const grass = new Actor(this.grassMesh.slice(0, 30), this.grassProgram, this.grass);
+    // grass.blendMode = "alpha";
+    // this.actors.push(grass);
 
-    const actor4 = new Actor(this.grassMesh.slice(0, 6), this.grassProgram, this.grass);
-    this.actors.push(actor4);
+    const water = new Actor(this.waterMesh.slice(0, 30), this.waterProgram, this.water);
+    water.blendMode = "alpha";
+    this.actors.push(water);
 
-    const actor5 = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
-    this.actors.push(actor5);
-    mat4.translate(actor5.model, actor5.model, [200, -900, 0]);
+
+
+    const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
+    fire.blendMode = "add";
+    this.actors.push(fire);
+    mat4.translate(fire.model, fire.model, [200, -900, 0]);
+
+    const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
+    smoke.blendMode = "alpha";
+    this.actors.push(smoke);
+    mat4.translate(smoke.model, smoke.model, [200, -900, 0]);
 
     // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor6);
@@ -153,6 +174,9 @@ export class Application {
     this.leavesTexture = createTexture(gl, this.leavesImage);
     this.wavesTexture = createTexture(gl, this.wavesImage);
     this.smokeTexture = createTexture(gl, this.smokeImage);
+    this.grassTexture = createTexture(gl, this.grassImage);
+    this.dirtTexture = createTexture(gl, this.dirtImage);
+    this.fireTexture = createTexture(gl, this.fireImage);
 
     // Materials
     this.rock = {
@@ -170,6 +194,8 @@ export class Application {
     };
 
     this.grass = {
+      grass: this.grassTexture,
+      dirt: this.dirtTexture
     };
 
     this.smoke = {
@@ -187,11 +213,12 @@ export class Application {
     };
 
     this.fire = {
-      texture: this.smokeTexture,
+      size: [20, 20],
+      texture: this.fireTexture,
       animationParameters: {
-        frames: 45,
-        rows: 7,
-        cols: 7,
+        frames: 16,
+        rows: 4,
+        cols: 4,
         fps: -10
       }
     };
@@ -260,33 +287,67 @@ export class Application {
       // {"x":-10539226.157513985,"y":4651715.015356203},
       // {"x":-10539244.669606775,"y":4651727.555806157}
     ];
-    for (let i = 0; i < 10; ++i) {
-      for (let j = 0; j < 10; ++j) {
-        trees.push({"x":-50+(x + i * 10)+200,"y":-50+(y + j * 10)-300});
+    for (let i = 0; i < 5; ++i) {
+      for (let j = 0; j < 5; ++j) {
+        trees.push({"x":-50+(x + i * 20)+200,"y":-50+(y + j * 20)-300});
       }
     }
     const particlesPerTree = 100;
     this.canopyMesh = createCanopyMesh(gl, trees, particlesPerTree);
     this.canopyGeometry = this.canopyMesh.slice(0, trees.length * particlesPerTree * 6);
 
-    this.waterMesh = new Mesh(gl, layouts.P, new Float32Array([
-      -50+x-100, -50+y-300, 0.0,
-      50+x-100, -50+y-300, 0.0,
-      -50+x-100,  50+y-300, 0.0,
-      50+x-100,  50+y-300, 0.0
+    this.waterMesh = new Mesh(gl, layouts.PS, new Float32Array([
+      -50+x-100, -50+y-300, 0.1, 1,
+      50+x-100, -50+y-300, 0.1, 1,
+      -50+x-100,  50+y-300, 0.1, 1,
+      50+x-100,  50+y-300, 0.1, 1,
+
+      -80+x-100, -80+y-300, 0.1, 0,
+      80+x-100, -80+y-300, 0.1, 0,
+      -80+x-100,  80+y-300, 0.1, 0,
+      80+x-100,  80+y-300, 0.1, 0
     ]).buffer, new Uint16Array([
       0, 1, 2,
-      1, 3, 2
+      1, 3, 2,
+
+      4, 1, 0,
+      4, 5, 1,
+
+      5, 3, 1,
+      5, 7, 3,
+      
+      7, 2, 3,
+      7, 6, 2,
+
+      6, 4, 0,
+      6, 0, 2
     ]).buffer);
 
-    this.grassMesh = new Mesh(gl, layouts.P, new Float32Array([
-      -50+x+50, -50+y-300, 0.0,
-      50+x+50, -50+y-300, 0.0,
-      -50+x+50,  50+y-300, 0.0,
-      50+x+50,  50+y-300, 0.0
+    this.grassMesh = new Mesh(gl, layouts.PS, new Float32Array([
+      x-200, y-490, 0.0, 1,
+      x+320, y-490, 0.0, 1,
+      x-200, y-200, 0.0, 1,
+      x+320, y-200, 0.0, 1,
+
+      x-230, y-520, 0.0, 0,
+      x+350, y-520, 0.0, 0,
+      x-230, y-170, 0.0, 0,
+      x+350, y-170, 0.0, 0
     ]).buffer, new Uint16Array([
       0, 1, 2,
-      1, 3, 2
+      1, 3, 2,
+
+      4, 1, 0,
+      4, 5, 1,
+
+      5, 3, 1,
+      5, 7, 3,
+      
+      7, 2, 3,
+      7, 6, 2,
+
+      6, 4, 0,
+      6, 0, 2
     ]).buffer);
 
     const smokeParticles = 100;
@@ -305,7 +366,7 @@ export class Application {
         0, 0, 0.0,  0.5,  0.5, r0, r1, r2, r3
       );
 
-      const baseVertex =  i * 4;
+      const baseVertex = i * 4;
 
       smokeIndexData.push(
         baseVertex + 0, baseVertex + 1, baseVertex + 2,
@@ -313,6 +374,17 @@ export class Application {
       );
     }
     this.smokeGeometry = new Mesh(gl, layouts.POR, new Float32Array(smokeVertexData).buffer, new Uint16Array(smokeIndexData).buffer).slice(0, smokeParticles * 6);
+
+    this.fireGeometry = new Mesh(gl, layouts.PO, new Float32Array([
+      0, 0, 0.0, -0.5, -0.5,
+      0, 0, 0.0,  0.5, -0.5,
+      0, 0, 0.0, -0.5,  0.5,
+      0, 0, 0.0,  0.5,  0.5
+    ]).buffer, new Uint16Array([
+      0, 1, 2,
+      1, 3, 2
+    ]).buffer).slice(0, 6);
+
 
     // We are done
     this.initialized = true;
@@ -324,9 +396,6 @@ export class Application {
       gl.clearColor(bg[0], bg[1], bg[2], bg[3]);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
-
-    gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.BLEND);
 
     mat4.identity(this.view);
     const d = 1000 * this.resolution;
@@ -343,6 +412,18 @@ export class Application {
     gl.enable(gl.DEPTH_TEST);
 
     for (const actor of this.actors) {
+      if (actor.blendMode === "opaque") {
+        gl.disable(gl.BLEND);
+      } else {
+        gl.enable(gl.BLEND);
+
+        if (actor.blendMode === "add") {
+          gl.blendFunc(gl.ONE, gl.ONE);
+        } else if (actor.blendMode === "alpha") {
+          gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
+        }
+      }
+
       const mesh = actor.geometry.mesh;
       const program = actor.program;
       
