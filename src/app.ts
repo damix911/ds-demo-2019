@@ -1,4 +1,4 @@
-import { loadImage, createTexture, createIndexBuffer, createVertexBuffer } from "./misc";
+import { loadImage, createTexture, createIndexBuffer, createVertexBuffer, loadJson } from "./misc";
 import { Actor } from "./scene";
 import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { Mesh, IGeometry } from "./meshes";
@@ -6,6 +6,7 @@ import { StandardProgram, Program, Material, CanopyProgram, WaterProgram, GrassP
 import * as layouts from "./layouts";
 import { createCanopyMesh } from "./demo/misc";
 import { origin } from "./defs";
+import earcut from "earcut";
 
 export class Application {
   private initialized = false;
@@ -40,7 +41,7 @@ export class Application {
   private groundMesh: Mesh;
   private canopyMesh: Mesh;
   private canopyGeometry: IGeometry;
-  private waterMesh: Mesh;
+  private waterGeometry: IGeometry;
   private grassMesh: Mesh;
   private smokeGeometry: IGeometry;
   private fireGeometry: IGeometry;
@@ -60,6 +61,7 @@ export class Application {
   private dirtTexture: WebGLTexture;
   private fireImage: HTMLImageElement;
   private fireTexture: WebGLTexture;
+  private middleCreek: any;
 
   // Wind
   windAngle: number;
@@ -84,6 +86,7 @@ export class Application {
     this.grassImage = await loadImage("assets/grass.jpg");
     this.dirtImage = await loadImage("assets/dirt.png");
     this.fireImage = await loadImage("assets/13221-v6.jpg");
+    this.middleCreek = await loadJson("assets/MiddleCreek.json");
   }
 
   setWind(windAngle: number, windSpeed: number) {
@@ -142,7 +145,7 @@ export class Application {
     // grass.blendMode = "alpha";
     // this.actors.push(grass);
 
-    const water = new Actor(this.waterMesh.slice(0, 30), this.waterProgram, this.water);
+    const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
     water.blendMode = "alpha";
     this.actors.push(water);
 
@@ -151,12 +154,12 @@ export class Application {
     const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
     fire.blendMode = "add";
     this.actors.push(fire);
-    mat4.translate(fire.model, fire.model, [-25, -40, 0]);
+    mat4.translate(fire.model, fire.model, [-10539069.286145981 - origin[0], 4651690.313822922 - origin[1], 0]);
 
     const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
     smoke.blendMode = "alpha";
     this.actors.push(smoke);
-    mat4.translate(smoke.model, smoke.model, [-25, -40, 0]);
+    mat4.translate(smoke.model, smoke.model, [-10539069.286145981 - origin[0], 4651690.313822922 - origin[1], 0]);
 
     // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor6);
@@ -213,7 +216,7 @@ export class Application {
     };
 
     this.fire = {
-      size: [20, 20],
+      size: [10, 10],
       texture: this.fireTexture,
       animationParameters: {
         frames: 16,
@@ -307,36 +310,77 @@ export class Application {
     this.canopyMesh = createCanopyMesh(gl, trees, particlesPerTree);
     this.canopyGeometry = this.canopyMesh.slice(0, trees.length * particlesPerTree * 6);
 
-    {
-      const x = 0;
-      const y = 0;
-      this.waterMesh = new Mesh(gl, layouts.PS, new Float32Array([
-        -50+x+100, -50+y-300, 0.1, 1,
-        50+x+100, -50+y-300, 0.1, 1,
-        -50+x+100,  50+y-300, 0.1, 1,
-        50+x+100,  50+y-300, 0.1, 1,
 
-        -80+x+100, -80+y-300, 0.1, 0,
-        80+x+100, -80+y-300, 0.1, 0,
-        -80+x+100,  80+y-300, 0.1, 0,
-        80+x+100,  80+y-300, 0.1, 0
-      ]).buffer, new Uint16Array([
-        0, 1, 2,
-        1, 3, 2,
 
-        4, 1, 0,
-        4, 5, 1,
 
-        5, 3, 1,
-        5, 7, 3,
+
+
+
+
+
+
+
+
+
+    // {
+    //   const x = 0;
+    //   const y = 0;
+    //   this.waterMesh = new Mesh(gl, layouts.PS, new Float32Array([
+    //     -50+x+100, -50+y-300, 0.1, 1,
+    //     50+x+100, -50+y-300, 0.1, 1,
+    //     -50+x+100,  50+y-300, 0.1, 1,
+    //     50+x+100,  50+y-300, 0.1, 1,
+
+    //     -80+x+100, -80+y-300, 0.1, 0,
+    //     80+x+100, -80+y-300, 0.1, 0,
+    //     -80+x+100,  80+y-300, 0.1, 0,
+    //     80+x+100,  80+y-300, 0.1, 0
+    //   ]).buffer, new Uint16Array([
+    //     0, 1, 2,
+    //     1, 3, 2,
+
+    //     4, 1, 0,
+    //     4, 5, 1,
+
+    //     5, 3, 1,
+    //     5, 7, 3,
         
-        7, 2, 3,
-        7, 6, 2,
+    //     7, 2, 3,
+    //     7, 6, 2,
 
-        6, 4, 0,
-        6, 0, 2
-      ]).buffer);
+    //     6, 4, 0,
+    //     6, 0, 2
+    //   ]).buffer);
+    // }
+
+    {
+      // this.middleCreek
+      // const lake = earcut();
+      const flattened = earcut.flatten(this.middleCreek.feature.geometry.rings);
+      const indices = earcut(flattened.vertices, flattened.holes, flattened.dimensions);
+      const vertices: number[] = [];
+      for (let i = 0; i < flattened.vertices.length; i += 2) {
+        const x = flattened.vertices[i + 0] - origin[0];
+        const y = flattened.vertices[i + 1] - origin[1];
+        vertices.push(x, y, 0.1, 1);
+      }
+      this.waterGeometry = new Mesh(gl, layouts.PS, new Float32Array(vertices).buffer, new Uint16Array(indices).buffer).slice(0, indices.length);
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     this.grassMesh = new Mesh(gl, layouts.PS, new Float32Array([
       x-200, y-490, 0.0, 1,
@@ -365,7 +409,7 @@ export class Application {
       6, 0, 2
     ]).buffer);
 
-    const smokeParticles = 100;
+    const smokeParticles = 30;
     const smokeVertexData: number[] = [];
     const smokeIndexData: number[] = [];
     for (let i = 0; i < smokeParticles; ++i) {
@@ -400,7 +444,6 @@ export class Application {
       1, 3, 2
     ]).buffer).slice(0, 6);
 
-
     // We are done
     this.initialized = true;
   }
@@ -413,7 +456,7 @@ export class Application {
     }
 
     mat4.identity(this.view);
-    const d = 1000 * this.resolution;
+    const d = 800 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     this.translation[0] = -(this.center[0] - origin[0]);
     this.translation[1] = -(this.center[1] - origin[1]);
@@ -469,7 +512,7 @@ export class Application {
     gl.deleteTexture(this.smokeTexture);
     this.groundMesh.dispose(gl);
     this.canopyMesh.dispose(gl);
-    this.waterMesh.dispose(gl);
+    // this.waterMesh.dispose(gl);
     this.grassMesh.dispose(gl);
     //this.smokeMesh.dispose(gl);
   }

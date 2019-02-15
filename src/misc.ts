@@ -59,3 +59,11 @@ export function loadImage(url: string): Promise<HTMLImageElement> {
     });
   });
 }
+
+export function loadText(url: string): Promise<string> {
+  return fetch(url).then((response) => response.text());
+}
+
+export function loadJson(url: string): Promise<any> {
+  return loadText(url).then(json => JSON.parse(json));
+}

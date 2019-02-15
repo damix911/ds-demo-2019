@@ -450,7 +450,7 @@ export class WaterProgram extends MaterialProgram {
           float dx = hR - hL;
           float dy = hU - hD;
 
-          vec3 normal = normalize(vec3(-dx, -dy, 0.5));
+          vec3 normal = normalize(vec3(-dx, -dy, 1.5));
           vec3 r = reflect(-u_light_dir, normal);
           float fresnel = 1.0 - dot(normal, view);
           float s = pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
