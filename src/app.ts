@@ -456,7 +456,7 @@ export class Application {
     }
 
     mat4.identity(this.view);
-    const d = 800 * this.resolution;
+    const d = 840 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     this.translation[0] = -(this.center[0] - origin[0]);
     this.translation[1] = -(this.center[1] - origin[1]);
