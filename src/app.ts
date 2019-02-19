@@ -208,7 +208,7 @@ export class Application {
     this.diffuseTexture = createTexture(gl, this.diffuseImage);
     this.normalTexture = createTexture(gl, this.normalImage);
     this.leavesTexture = createTexture(gl, this.leavesImage);
-    this.wavesTexture = createTexture(gl, this.wavesImage);
+    this.wavesTexture = createTexture(gl, this.wavesImage, false);
     this.smokeTexture = createTexture(gl, this.smokeImage);
     this.grassTexture = createTexture(gl, this.grassImage);
     this.dirtTexture = createTexture(gl, this.dirtImage);

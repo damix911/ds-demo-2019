@@ -422,10 +422,20 @@ export class WaterProgram extends MaterialProgram {
         float distanceFactor = exp(-1.0 * length(pos - source) / cellSide);
 
         return heightFactor * distanceFactor * intensityFactor * v_scalar;
+
+        // return heightFactor;
+      }
+
+      float sampleCell_SIMPLE(vec2 pos, vec2 cell, float cellSide) {
+        vec2 source = cell * cellSide + cellSide * vec2(0.5, 0.5);
+        vec2 uv = (pos - source) / cellSide;
+        float heightFactor = texture2D(u_waves, uv).r;
+
+        return heightFactor;
       }
 
       float getPartialHeight(vec2 pos, float cellSide) {
-        vec2 cell = floor(v_position / cellSide);
+        vec2 cell = floor(pos / cellSide);
         float s = 0.0;
 
         const int M = 3;
@@ -440,7 +450,20 @@ export class WaterProgram extends MaterialProgram {
       }
 
       float getHeight(vec2 pos) {
-        return getPartialHeight(pos, 30.0);
+        return getPartialHeight(pos, 60.0);
+      }
+
+      vec4 getDebugColor(vec2 pos) {
+        float cellSide = 60.0;
+        vec2 cell = floor(pos / cellSide);
+
+        vec2 source = cell * cellSide;// + cellSide * vec2(0.5, 0.5);
+        vec2 uv1 = (pos - source) / cellSide;
+        vec2 uv0 = source / cellSide;
+        vec4 color = vec4(uv1, 0.0, 1.0);
+        color = texture2D(u_waves, uv1);
+        
+        return color;
       }
 
       void main() {
@@ -464,7 +487,8 @@ export class WaterProgram extends MaterialProgram {
           gl_FragColor = color;
 
           // gl_FragColor = texture2D(u_waves, v_position / 5000.0);
-          // gl_FragColor = vec4(getHeight(v_position), 0.0, 0.0, 1.0);
+          // gl_FragColor = vec4(0.5 * getHeight(v_position), 0.0, 0.0, 1.0);
+          // gl_FragColor = getDebugColor(v_position);
       }
     `, {
       "a_position": 0,
