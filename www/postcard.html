@@ -54,12 +54,19 @@
         detach: function() {
         },
 
+        toRGB: function(hexColor) {
+          return hexColor.slice(1).match(/../g).map((c,i)=>(('0x'+c)/(i-3?1:255)) / 255);
+        },
+
         render: function(renderParameters) {
           if (!this.app) {
             return;
           }
 
           this.app.setWind(Math.PI * this.layer.windAngle / 180, this.layer.windSpeed);
+          const sunColor = this.toRGB(this.layer.sunColor); // vec3.fromValues(1.0, 1.0, 0.8);
+          const skyColor = this.toRGB(this.layer.skyColor); // vec3.fromValues(25.0 / 255.0, 72.0 / 255.0, 75.0 / 255.0);
+          this.app.setAtmosphere(Math.PI * this.layer.sunElevation / 180, Math.PI * this.layer.sunAzimuth / 180, sunColor, skyColor);
           this.app.setView(renderParameters.state.center, renderParameters.state.rotation, renderParameters.state.resolution);
           this.app.render(renderParameters.context);
           this.requestRender();
@@ -69,12 +76,21 @@
       var CustomLayer = Layer.createSubclass({
         properties: {
           windAngle: Number,
-          windSpeed: Number
+          windSpeed: Number,
+          sunElevation: Number,
+          sunAzimuth: Number,
+          sunColor: String,
+          skyColor: String
         },
 
         constructor() {
           this.windAngle = 20;
           this.windSpeed = 400;
+          
+          this.sunElevation = 0;
+          this.sunAzimuth = 0;
+          this.sunColor = "#f0f0c0";
+          this.skyColor = "#19484b";
         },
 
         createLayerView: function(view) {
@@ -116,6 +132,10 @@
       });
       gui.add(layer, "windSpeed");
       gui.add(layer, "windAngle");
+      gui.add(layer, "sunElevation");
+      gui.add(layer, "sunAzimuth");
+      gui.addColor(layer, "sunColor");
+      gui.addColor(layer, "skyColor");
     });
   </script>
 </head>
