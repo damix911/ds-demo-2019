@@ -67,6 +67,12 @@ export class Application {
   windAngle: number;
   windSpeed: number;
 
+  // Atmosphere
+  sunElevation: number;
+  sunAzimuth: number;
+  sunColor: vec3;
+  skyColor: vec3;
+
   // View - original
   center = vec2.fromValues(0, 0);
   rotation = 0;
@@ -92,6 +98,13 @@ export class Application {
   setWind(windAngle: number, windSpeed: number) {
     this.windAngle = windAngle;
     this.windSpeed = windSpeed;
+  }
+
+  setAtmosphere(sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
+    this.sunElevation = sunElevation;
+    this.sunAzimuth = sunAzimuth;
+    this.sunColor = sunColor;
+    this.skyColor = skyColor;
   }
 
   setView(center: [number, number], rotation: number, resolution: number) {
@@ -137,6 +150,29 @@ export class Application {
     // const actor1 = new Actor(this.groundMesh.slice(0, 18), this.standardProgram, this.rock);
     // this.actors.push(actor1);
 
+
+    const fires = [
+      [-10539069.286145981, 4651690.313822922],
+      [-10539274.561368467, 4651743.013570938],
+      [-10539221.41374723, 4651711.36386391],
+      [-10539168.863290278, 4651686.880128284],
+      [-10539137.21358325, 4651681.5056497315],
+      [-10539030.321176492, 4651747.790885207],
+      [-10538992.102662344, 4651800.938506444],
+      [-10538974.78489812, 4651836.171199174]
+    ];
+
+    const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
+    water.blendMode = "alpha";
+    this.actors.push(water);
+
+    for (const point of fires) {
+      const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
+      fire.blendMode = "add";
+      this.actors.push(fire);
+      mat4.translate(fire.model, fire.model, [point[0] - origin[0], point[1] - origin[1], 0]);
+    }
+
     const actor2 = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
     actor2.blendMode = "alpha";
     this.actors.push(actor2);
@@ -145,21 +181,18 @@ export class Application {
     // grass.blendMode = "alpha";
     // this.actors.push(grass);
 
-    const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
-    water.blendMode = "alpha";
-    this.actors.push(water);
 
 
 
-    const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
-    fire.blendMode = "add";
-    this.actors.push(fire);
-    mat4.translate(fire.model, fire.model, [-10539069.286145981 - origin[0], 4651690.313822922 - origin[1], 0]);
 
-    const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
-    smoke.blendMode = "alpha";
-    this.actors.push(smoke);
-    mat4.translate(smoke.model, smoke.model, [-10539069.286145981 - origin[0], 4651690.313822922 - origin[1], 0]);
+
+
+    for (const point of fires) {
+      const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
+      smoke.blendMode = "alpha";
+      this.actors.push(smoke);
+      mat4.translate(smoke.model, smoke.model, [point[0] - origin[0], point[1] - origin[1], 0]);
+    }
 
     // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
     // this.actors.push(actor6);
@@ -419,10 +452,10 @@ export class Application {
       const r3 = Math.random();
 
       smokeVertexData.push(
-        0, 0, 40.0, -0.5, -0.5, r0, r1, r2, r3,
-        0, 0, 40.0,  0.5, -0.5, r0, r1, r2, r3,
-        0, 0, 40.0, -0.5,  0.5, r0, r1, r2, r3,
-        0, 0, 40.0,  0.5,  0.5, r0, r1, r2, r3
+        0, 0, 0.2, -0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 0.2,  0.5, -0.5, r0, r1, r2, r3,
+        0, 0, 0.2, -0.5,  0.5, r0, r1, r2, r3,
+        0, 0, 0.2,  0.5,  0.5, r0, r1, r2, r3
       );
 
       const baseVertex = i * 4;
@@ -455,19 +488,26 @@ export class Application {
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
 
+    const near = 0.1;
+    const far = 100;
+
     mat4.identity(this.view);
-    const d = 840 * this.resolution;
+    //const d = 840 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     this.translation[0] = -(this.center[0] - origin[0]);
     this.translation[1] = -(this.center[1] - origin[1]);
-    this.translation[2] = -d;
+    this.translation[2] = -far;
     mat4.translate(this.view, this.view, this.translation);
     
-    mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, d - 100, d + 100);
+    // console.log("W,H", gl.canvas.width, gl.canvas.height);
+    const Wover2 = this.resolution * (gl.canvas.width / 2) / (far / near);
+    const Hover2 = this.resolution * (gl.canvas.height / 2) / (far / near);
+    mat4.frustum(this.project, -Wover2, Wover2, -Hover2, Hover2, near,far);
+    // mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, d - 100, d + 100);
 
     this.framePrograms.clear();
 
-    gl.enable(gl.DEPTH_TEST);
+    // gl.enable(gl.DEPTH_TEST);
 
     for (const actor of this.actors) {
       if (actor.blendMode === "opaque") {
@@ -536,6 +576,10 @@ export class Application {
 
     if ("updateWind" in program) {
       program.updateWind(gl, this.windAngle, this.windSpeed);
+    }
+
+    if ("updateAtmosphere" in program) {
+      program.updateAtmosphere(gl, this.sunElevation, this.sunAzimuth, this.sunColor, this.skyColor);
     }
   }
 

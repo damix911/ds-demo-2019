@@ -1,5 +1,5 @@
 import { createProgram } from "./misc";
-import { mat4 } from "gl-matrix";
+import { mat4, vec3 } from "gl-matrix";
 
 export type Material = any;
 
@@ -206,7 +206,7 @@ export class CanopyProgram extends MaterialProgram {
         // position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
         // position.xy += 5.0 * (a_random.xy - 0.5);
 
-        float bend = 0.03*(a_position.z / 30.0) * (cos(u_time) + 1.0);
+        float bend = 0.03*(a_position.z / 10.0) * (cos(u_time) + 1.0);
         position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
         
         vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
@@ -330,6 +330,8 @@ export class WaterProgram extends MaterialProgram {
   private timeLocation: WebGLUniformLocation;
   private wavesLocation: WebGLUniformLocation;
   private windLocation: WebGLUniformLocation;
+  private sunColorLocation: WebGLUniformLocation;
+  private skyColorLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
@@ -361,6 +363,8 @@ export class WaterProgram extends MaterialProgram {
       uniform float u_time;
       uniform sampler2D u_waves;
       uniform vec2 u_wind;
+      uniform vec3 u_sunColor;
+      uniform vec3 u_skyColor;
       // uniform float u_resolution;
       // uniform vec3 u_light_dir;
       // uniform float u_wind_angle;
@@ -371,7 +375,6 @@ export class WaterProgram extends MaterialProgram {
 
       const vec3 albedoDeep = vec3(25.0, 72.0, 75.0) / 255.0;
       const vec3 albedoShallow = vec3(41.0, 113.0, 117.0) / 255.0;
-      const vec3 sun = vec3(1.0, 1.0, 0.8);
       const vec3 view = vec3(0.0, 0.0, 1.0);
       const float PI = 3.14159;
 
@@ -454,7 +457,8 @@ export class WaterProgram extends MaterialProgram {
           vec3 r = reflect(-u_light_dir, normal);
           float fresnel = 1.0 - dot(normal, view);
           float s = pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
-          vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * sun;
+          // vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * u_sun;
+          vec3 waterColor = mix(albedoShallow, u_skyColor, v_scalar) + s * u_sunColor;
           float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
           vec4 color = vec4(waterColor * alpha, alpha);
           gl_FragColor = color;
@@ -473,6 +477,8 @@ export class WaterProgram extends MaterialProgram {
     this.timeLocation = this.getUniformLocation(gl, "u_time");
     this.wavesLocation = this.getUniformLocation(gl, "u_waves");
     this.windLocation = this.getUniformLocation(gl, "u_wind");
+    this.sunColorLocation = this.getUniformLocation(gl, "u_sunColor");
+    this.skyColorLocation = this.getUniformLocation(gl, "u_skyColor");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -493,6 +499,11 @@ export class WaterProgram extends MaterialProgram {
 
   updateWind(gl: WebGLRenderingContext, angle: number, speed: number) {
     gl.uniform2f(this.windLocation, angle, speed);
+  }
+
+  updateAtmosphere(gl: WebGLRenderingContext, sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
+    gl.uniform3fv(this.sunColorLocation, sunColor);
+    gl.uniform3fv(this.skyColorLocation, skyColor);
   }
 
   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
@@ -589,6 +600,80 @@ export class GrassProgram extends MaterialProgram {
   }
 }
 
+// export class AmbientProgram {
+//   private modelLocation: WebGLUniformLocation;
+
+//   constructor(gl: WebGLRenderingContext) {
+//     super(gl, `
+//       precision mediump float;
+
+//       attribute vec4 a_position;
+
+//       uniform mat4 u_model;
+
+//       void main(void) {
+//         gl_Position = u_model * a_position;
+//         v_position = a_position.xy;
+//         v_scalar = a_scalar;
+//       }
+//     `, `
+//       precision mediump float;
+
+//       varying vec2 v_position;
+//       varying float v_scalar;
+
+//       uniform float u_time;
+//       uniform sampler2D u_grass;
+//       uniform sampler2D u_dirt;
+      
+//       void main() {
+//         vec3 grass = texture2D(u_grass, v_position / 150.0).rgb;
+//         vec3 dirt = texture2D(u_dirt, v_position / 150.0).rgb;
+//         vec3 mixed = mix(dirt, grass, v_scalar);
+//         float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
+//         vec4 color = vec4(mixed * alpha, alpha);
+
+//         gl_FragColor = color;
+//       }
+//     `, {
+//       "a_position": 0,
+//       "a_scalar": 1
+//     });
+
+//     this.modelLocation = this.getUniformLocation(gl, "u_model");
+//     this.viewLocation = this.getUniformLocation(gl, "u_view");
+//     this.projectLocation = this.getUniformLocation(gl, "u_project");
+//     this.timeLocation = this.getUniformLocation(gl, "u_time");
+//     this.grassLocation = this.getUniformLocation(gl, "u_grass");
+//     this.dirtLocation = this.getUniformLocation(gl, "u_dirt");
+//   }
+
+//   updateView(gl: WebGLRenderingContext, view: mat4) {
+//     gl.uniformMatrix4fv(this.viewLocation, false, view);
+//   }
+
+//   updateModel(gl: WebGLRenderingContext, model: mat4) {
+//     gl.uniformMatrix4fv(this.modelLocation, false, model);
+//   }
+
+//   updateProject(gl: WebGLRenderingContext, project: mat4) {
+//     gl.uniformMatrix4fv(this.projectLocation, false, project);
+//   }
+
+//   updateTime(gl: WebGLRenderingContext, time: number) {
+//     gl.uniform1f(this.timeLocation, time);
+//   }
+
+//   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+//     gl.activeTexture(gl.TEXTURE0);
+//     gl.bindTexture(gl.TEXTURE_2D, material.grass);
+//     gl.uniform1i(this.grassLocation, 0);
+
+//     gl.activeTexture(gl.TEXTURE1);
+//     gl.bindTexture(gl.TEXTURE_2D, material.dirt);
+//     gl.uniform1i(this.dirtLocation, 1);
+//   }
+// }
 
 
 // precision mediump float;
@@ -779,14 +864,14 @@ export class SmokeProgram extends MaterialProgram {
         vec4 random = a_random;
         float phase = mod(u_time / u_period + random.z, 1.0);
         
-        float alpha = ease1(0.0, 1.0, phase, u_alpha_easing);
+        float alpha = ease1(0.0, 0.3, phase, u_alpha_easing);
         float size = ease1(u_size_values[0], u_size_values[1], phase, u_size_easing);
 
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
         gl_Position.xy += 2.0 * (a_offset * size / u_frame_size) * gl_Position.w;
         float windAngle = u_wind[0] + (random.y - 0.5) * PI / 8.0;
-        gl_Position.xy += phase * u_wind[1] * vec2(cos(-windAngle), sin(-windAngle));
+        gl_Position.xy += 0.1 * phase * u_wind[1] * vec2(cos(-windAngle), sin(-windAngle));
         v_offset = a_offset;
         v_tint = vec4(1.0, 1.0, 1.0, alpha);
 

@@ -35,10 +35,10 @@ export function createCanopyMesh(gl: WebGLRenderingContext, trees: any[], partic
         0, 0, 1 + noise()
       ];
       vertexData.push(
-        px, py, 30 * j / particlesPerTree,     0, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -20, -20, 0, r0, r1, r2,
-        px, py, 30 * j / particlesPerTree,     1, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     20, -20, 0, r0, r1, r2,
-        px, py, 30 * j / particlesPerTree,     0, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -20,  20, 0, r0, r1, r2,
-        px, py, 30 * j / particlesPerTree,     1, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     20,  20, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     0, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -20, -20, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     1, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     20, -20, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     0, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -20,  20, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     1, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     20,  20, 0, r0, r1, r2,
       );
 
       const baseVertex = (i * particlesPerTree + j) * 4;
