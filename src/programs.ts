@@ -206,7 +206,7 @@ export class CanopyProgram extends MaterialProgram {
         // position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
         // position.xy += 5.0 * (a_random.xy - 0.5);
 
-        float bend = 0.03*(a_position.z / 10.0) * (cos(u_time) + 1.0);
+        float bend = 0.01*(a_position.z / 10.0) * (cos(u_time) + 1.0);
         position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
         
         vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
@@ -235,7 +235,7 @@ export class CanopyProgram extends MaterialProgram {
           v_normal = -v_normal;
         }
 
-        v_darken = 1.0;//0.8 + 0.2 * r;
+        v_darken = 0.3 + 0.7 * r;
         
         v_random = a_random;
       }
