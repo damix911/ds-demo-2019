@@ -490,8 +490,8 @@ export class Application {
     this.translation[2] = -far;
     mat4.translate(this.view, this.view, this.translation);
 
-    const W = (this.resolution * (this.size[0]) / (far / near)) * this.pixelRatio;
-    const H = (this.resolution * (this.size[1]) / (far / near)) * this.pixelRatio;
+    const W = (this.resolution * (this.size[0]) / (far / near));// * this.pixelRatio;
+    const H = (this.resolution * (this.size[1]) / (far / near));// * this.pixelRatio;
     // const Wover2 = (this.resolution * (gl.canvas.width / 2) / (far / near)) / this.pixelRatio;
     // const Hover2 = (this.resolution * (gl.canvas.height / 2) / (far / near)) / this.pixelRatio;
     mat4.frustum(this.project, -W / 2, W / 2, -H / 2, H / 2, near, far);
