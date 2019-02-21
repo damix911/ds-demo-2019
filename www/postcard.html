@@ -17,9 +17,58 @@
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.7.5/dat.gui.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/gl-matrix/2.8.1/gl-matrix.js"></script>
-  <link rel="stylesheet" href="https://jsdev.arcgis.com/4.11/esri/themes/light/main.css">
-  <script src="https://jsdev.arcgis.com/4.11/"></script>
+
+  <!-- PUBLIC API -->
   
+  <!-- <link rel="stylesheet" href="https://jsdev.arcgis.com/4.11/esri/themes/light/main.css">
+  <script src="https://jsdev.arcgis.com/4.11/"></script> -->
+ 
+  
+  <!-- UNBUILD REPO -->
+  <link rel="stylesheet" href="http://ddamico.esri.com/arcgis-js-api-4/esri/css/main.css">
+
+  <style>
+    html,
+    body,
+    #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+
+    .title {
+      top: 1em;
+      right: 1em;
+      position: absolute;
+      background-color: white;
+      padding: 1em;
+    }
+  </style>
+
+  <script>
+    var dojoConfig = {
+      async: true,
+      isDebug: false,
+      has: {
+        "config-deferredInstrumentation": 0,
+        "esri-feature-tiles-debug": 0,
+        "esri-featurelayer-webgl": 1
+      }
+    };
+
+  </script>
+
+  <script src="http://ddamico.esri.com/arcgis-js-api-4/test-apps/dojo-config.js"></script>
+  <script src="http://ddamico.esri.com/arcgis-js-api-4/dojo/dojo.js"></script>
+  
+
+
+
+
+
+
+
   <script>
     require([
       "esri/Map",
@@ -67,7 +116,14 @@
           const sunColor = this.toRGB(this.layer.sunColor); // vec3.fromValues(1.0, 1.0, 0.8);
           const skyColor = this.toRGB(this.layer.skyColor); // vec3.fromValues(25.0 / 255.0, 72.0 / 255.0, 75.0 / 255.0);
           this.app.setAtmosphere(Math.PI * this.layer.sunElevation / 180, Math.PI * this.layer.sunAzimuth / 180, sunColor, skyColor);
-          this.app.setView(renderParameters.state.center, renderParameters.state.rotation, renderParameters.state.resolution);
+          // console.log("renderParameters.state.size", renderParameters.state.size);
+          this.app.setView(
+            renderParameters.state.center,
+            renderParameters.state.rotation,
+            renderParameters.state.resolution,
+            renderParameters.state.pixelRatio,
+            renderParameters.state.size 
+          );
           this.app.render(renderParameters.context);
           this.requestRender();
         }
@@ -123,9 +179,25 @@
         // zoom: 15
       });
 
+      window.points = [];
+
       view.on("click", function (evt) {
         console.log(JSON.stringify({x: evt.mapPoint.x, y: evt.mapPoint.y}));
+        window.points.push([evt.mapPoint.x, evt.mapPoint.y]);
       });
+
+      function takePicture() {
+        view.takeScreenshot().then(function (data) {
+          const image = new Image();
+          image.src = data.dataUrl;
+          image.style.position = "absolute";
+          image.style.left = "100px";
+          image.style.top = "100px";
+          image.style.width = "50%";
+          image.style.border = "20pt solid white";
+          document.body.appendChild(image);
+        });
+      }
 
       var gui = new dat.GUI({
         height: 5 * 32 - 1
@@ -136,6 +208,7 @@
       gui.add(layer, "sunAzimuth");
       gui.addColor(layer, "sunColor");
       gui.addColor(layer, "skyColor");
+      gui.add({ takePicture: takePicture }, "takePicture");
     });
   </script>
 </head>
