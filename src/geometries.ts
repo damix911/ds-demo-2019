@@ -56,3 +56,7 @@ export function createCanopyMesh(gl: WebGLRenderingContext, trees: any[], partic
 
   return mesh;
 }
+
+// export function createPolygonMesh(gl: WebGLRenderingContext, rings: any[]): Mesh {
+
+// }

@@ -17,6 +17,10 @@ export class BaseProgram {
   protected getUniformLocation(gl: WebGLRenderingContext, name: string) {
     return gl.getUniformLocation(this.program, name);
   }
+
+  dispose(gl: WebGLRenderingContext) {
+    gl.deleteProgram(this.program);
+  }
 }
 
 export abstract class MaterialProgram extends BaseProgram {
@@ -150,7 +154,6 @@ export class CanopyProgram extends MaterialProgram {
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
   private diffuseLocation: WebGLUniformLocation;
-  private normalLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
   private windLocation: WebGLUniformLocation;
 
@@ -160,9 +163,6 @@ export class CanopyProgram extends MaterialProgram {
 
       attribute vec4 a_position;
       attribute vec2 a_texcoord;
-      attribute vec3 a_tangent;
-      attribute vec3 a_binormal;
-      attribute vec3 a_normal;
       attribute vec3 a_offset;
       attribute vec3 a_random;
 
@@ -174,9 +174,6 @@ export class CanopyProgram extends MaterialProgram {
 
       varying vec2 v_texcoord;
       varying vec3 v_eye;
-      varying vec3 v_tangent;
-      varying vec3 v_binormal;
-      varying vec3 v_normal;
       varying float v_darken;
       varying vec3 v_random;
 
@@ -227,13 +224,6 @@ export class CanopyProgram extends MaterialProgram {
         
 
         v_eye = -(viewModel * a_position).xyz;
-        v_tangent = viewModel3 * a_tangent;
-        v_binormal = viewModel3 * a_binormal;
-        v_normal = viewModel3 * a_normal;
-
-        if (dot(v_eye, v_normal) < 0.0) {
-          v_normal = -v_normal;
-        }
 
         v_darken = 0.3 + 0.7 * r;
         
@@ -250,44 +240,25 @@ export class CanopyProgram extends MaterialProgram {
       varying vec3 v_eye;
       varying vec3 v_tangent;
       varying vec3 v_binormal;
-      varying vec3 v_normal;
       varying float v_darken;
       varying vec3 v_random;
 
       void main(void) {
-        mat3 tbn = mat3(v_tangent, v_binormal, v_normal);
-        vec3 sampled = texture2D(u_normal, v_texcoord).rgb;
-        vec3 normal = normalize(tbn * (sampled * 2.0 - 1.0));
         vec4 diffuse = texture2D(u_diffuse, v_texcoord);
-
-        vec3 eye = normalize(v_eye);
-        
-        vec3 light = eye;
-        //vec3 light = vec3(0.0, 1.0, 0.0);
-
-        float d = clamp(dot(normal, light), 0.0, 1.0);
-        float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
-
-        gl_FragColor = vec4(diffuse.rgb * (0.3 + 0.3 * d) + vec3(0.4 * s), diffuse.a);
         gl_FragColor = diffuse;
-        //gl_FragColor.rgb *= v_darken;
         gl_FragColor.rgb *= gl_FragColor.a;
       }
     `, {
       "a_position": 0,
       "a_texcoord": 1,
-      "a_tangent": 2,
-      "a_binormal": 3,
-      "a_normal": 4,
-      "a_offset": 5,
-      "a_random": 6
+      "a_offset": 2,
+      "a_random": 3
     });
 
     this.modelLocation = this.getUniformLocation(gl, "u_model");
     this.viewLocation = this.getUniformLocation(gl, "u_view");
     this.projectLocation = this.getUniformLocation(gl, "u_project");
     this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
-    this.normalLocation = this.getUniformLocation(gl, "u_normal");
     this.timeLocation = this.getUniformLocation(gl, "u_time");
     this.windLocation = this.getUniformLocation(gl, "u_wind");
   }
@@ -316,10 +287,6 @@ export class CanopyProgram extends MaterialProgram {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, material.diffuse);
     gl.uniform1i(this.diffuseLocation, 0);
-
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, material.normal);
-    gl.uniform1i(this.normalLocation, 1);
   }
 }
 
