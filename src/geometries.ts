@@ -1,5 +1,7 @@
-import { Mesh } from "../meshes";
-import { PTTBNOR } from "../layouts";
+// Create
+
+import { Mesh } from "./meshes";
+import { PTOR } from "./layouts";
 
 function noise() {
   return Math.random() * 0.1 - 0.05;
@@ -35,10 +37,10 @@ export function createCanopyMesh(gl: WebGLRenderingContext, trees: any[], partic
         0, 0, 1 + noise()
       ];
       vertexData.push(
-        px, py, 10 * j / particlesPerTree,     0, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -15, -15, 0, r0, r1, r2,
-        px, py, 10 * j / particlesPerTree,     1, 0,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     15, -15, 0, r0, r1, r2,
-        px, py, 10 * j / particlesPerTree,     0, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],    -15,  15, 0, r0, r1, r2,
-        px, py, 10 * j / particlesPerTree,     1, 1,     tbn[0], tbn[1], tbn[2],    tbn[3], tbn[4], tbn[5],    tbn[6], tbn[7], tbn[8],     15,  15, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     0, 0,     -15, -15, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     1, 0,      15, -15, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     0, 1,     -15,  15, 0, r0, r1, r2,
+        px, py, 10 * j / particlesPerTree,     1, 1,      15,  15, 0, r0, r1, r2,
       );
 
       const baseVertex = (i * particlesPerTree + j) * 4;
@@ -50,7 +52,7 @@ export function createCanopyMesh(gl: WebGLRenderingContext, trees: any[], partic
     }
   }
 
-  const mesh = new Mesh(gl, PTTBNOR, new Float32Array(vertexData).buffer, new Uint16Array(indexData).buffer);
+  const mesh = new Mesh(gl, PTOR, new Float32Array(vertexData).buffer, new Uint16Array(indexData).buffer);
 
   return mesh;
 }

@@ -1,3 +1,5 @@
+// Miscellaneous utils
+
 export function createProgram(gl: WebGLRenderingContext, vsSrc: string, fsSrc: string, locations: {[attributeName: string]: number}): WebGLProgram {
   const vs = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(vs, vsSrc);

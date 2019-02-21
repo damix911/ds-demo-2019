@@ -4,7 +4,7 @@ import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { Mesh, IGeometry } from "./meshes";
 import { StandardProgram, Program, Material, CanopyProgram, WaterProgram, GrassProgram, SmokeProgram, SpriteProgram } from "./programs";
 import * as layouts from "./layouts";
-import { createCanopyMesh } from "./demo/misc";
+import { createCanopyMesh } from "./geometries";
 import { origin } from "./defs";
 import earcut from "earcut";
 
@@ -77,6 +77,8 @@ export class Application {
   center = vec2.fromValues(0, 0);
   rotation = 0;
   resolution = 1;
+  pixelRatio: number;
+  size = vec2.fromValues(0, 0);
   // View - processed
   translation = vec3.create();
 
@@ -95,6 +97,11 @@ export class Application {
     this.middleCreek = await loadJson("assets/MiddleCreek.json");
   }
 
+  setPixelRatio(pixelRatio: number): void {
+    // console.log("pixelRatio", pixelRatio);
+    this.pixelRatio = pixelRatio;
+  }
+
   setWind(windAngle: number, windSpeed: number) {
     this.windAngle = windAngle;
     this.windSpeed = windSpeed;
@@ -107,11 +114,14 @@ export class Application {
     this.skyColor = skyColor;
   }
 
-  setView(center: [number, number], rotation: number, resolution: number) {
+  setView(center: [number, number], rotation: number, resolution: number, pixelRatio: number, size: [number, number]) {
     this.center[0] = center[0];
     this.center[1] = center[1];
     this.rotation = rotation;
     this.resolution = resolution;
+    this.pixelRatio = pixelRatio;
+    this.size[0] = size[0];
+    this.size[1] = size[1];
   }
 
   render(gl: WebGLRenderingContext) {
@@ -474,18 +484,18 @@ export class Application {
     const far = 100;
 
     mat4.identity(this.view);
-    //const d = 840 * this.resolution;
     mat4.rotateZ(this.view, this.view, -Math.PI * this.rotation / 180);
     this.translation[0] = -(this.center[0] - origin[0]);
     this.translation[1] = -(this.center[1] - origin[1]);
     this.translation[2] = -far;
     mat4.translate(this.view, this.view, this.translation);
-    
-    // console.log("W,H", gl.canvas.width, gl.canvas.height);
-    const Wover2 = this.resolution * (gl.canvas.width / 2) / (far / near);
-    const Hover2 = this.resolution * (gl.canvas.height / 2) / (far / near);
-    mat4.frustum(this.project, -Wover2, Wover2, -Hover2, Hover2, near,far);
-    // mat4.perspective(this.project, 1, gl.canvas.width / gl.canvas.height, d - 100, d + 100);
+
+    const W = (this.resolution * (this.size[0]) / (far / near)) * this.pixelRatio;
+    const H = (this.resolution * (this.size[1]) / (far / near)) * this.pixelRatio;
+    // const Wover2 = (this.resolution * (gl.canvas.width / 2) / (far / near)) / this.pixelRatio;
+    // const Hover2 = (this.resolution * (gl.canvas.height / 2) / (far / near)) / this.pixelRatio;
+    mat4.frustum(this.project, -W / 2, W / 2, -H / 2, H / 2, near, far);
+    gl.viewport(0, 0, this.size[0] * this.pixelRatio, this.size[1] * this.pixelRatio);
 
     this.framePrograms.clear();
 
