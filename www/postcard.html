@@ -44,6 +44,69 @@
       background-color: white;
       padding: 1em;
     }
+
+    #flash {
+      opacity: 0;
+      background-color: white;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    #screen {
+      opacity: 0;
+      background-color: black;
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    #photo {
+      visibility: hidden;
+      pointer-events: none;
+      margin: auto;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      z-index: 1;
+      width: 600px;
+      border: 10pt solid white;
+      position: absolute;
+    }
+
+    @keyframes flash {
+      from { opacity: 1; }
+      to { opacity: 0; }
+    }
+
+    #flash.flashing {
+      animation-name: flash;
+      animation-duration: 1s;
+    }
+
+    #screen.screening {
+      opacity: 0.7;
+    }
+
+    @keyframes show {
+      from { transform: scale(0); }
+      to { transform: scale(1); }
+    }
+
+    #photo.showing {
+      visibility: visible;
+      animation-name: show;
+      animation-duration: 0.2s;
+      pointer-events: all;
+    }
   </style>
 
   <script>
@@ -186,16 +249,30 @@
         window.points.push([evt.mapPoint.x, evt.mapPoint.y]);
       });
 
+      var shutterSound = new Audio("assets/shutter.mp3");
+      var flash = document.getElementById("flash");
+      var screen = document.getElementById("screen");
+      var photo = document.getElementById("photo");
+
+      flash.addEventListener("animationend", function () {
+        this.className = "";
+      });
+
+      photo.addEventListener("click", function () {
+        photo.className = "";
+        flash.className = "";
+        screen.className = "";
+      });
+
       function takePicture() {
+        shutterSound.play();
+        flash.className = "flashing";
+        screen.className = "screening";
+
         view.takeScreenshot().then(function (data) {
-          const image = new Image();
+          const image = document.getElementById("photo");
           image.src = data.dataUrl;
-          image.style.position = "absolute";
-          image.style.left = "100px";
-          image.style.top = "100px";
-          image.style.width = "50%";
-          image.style.border = "20pt solid white";
-          document.body.appendChild(image);
+          image.className = "showing";
         });
       }
 
@@ -215,5 +292,8 @@
 
 <body>
   <div id="viewDiv"></div>
+  <div id="screen"></div>
+  <div id="flash"></div>
+  <img id="photo">
 </body>
 </html>
