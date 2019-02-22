@@ -2,7 +2,7 @@ import { loadImage, createTexture, loadJson } from "./misc";
 import { Actor } from "./scene";
 import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { Mesh, IGeometry } from "./meshes";
-import { Program, Material, CanopyProgram, WaterProgram, ParticleProgram, SpriteProgram } from "./programs";
+import { Program, Material, CanopyProgram, WaterProgram, ParticleProgram, SpriteProgram, AtmosphereProgram } from "./programs";
 import * as layouts from "./layouts";
 import { createCanopyMesh } from "./geometries";
 import { origin } from "./defs";
@@ -27,6 +27,7 @@ export class Application {
   private waterProgram: Program;
   private particleProgram: Program;
   private spriteProgram: Program;
+  private atmosphereProgram: Program;
 
   // Materials
   private canopy: Material;
@@ -39,6 +40,7 @@ export class Application {
   private waterGeometry: IGeometry;
   private smokeGeometry: IGeometry;
   private fireGeometry: IGeometry;
+  private quadGeometry: IGeometry;
   
   // Images and corresponding textures created from those images
   private leavesImage: HTMLImageElement;
@@ -135,6 +137,11 @@ export class Application {
   }
 
   private sceneSetup() {
+    // Atmosphere
+    const atmosphere = new Actor(this.quadGeometry, this.atmosphereProgram);
+    atmosphere.blendMode = "alpha";
+    this.actors.push(atmosphere);
+    
     // Water
     const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
     water.blendMode = "alpha";
@@ -160,9 +167,9 @@ export class Application {
     }
 
     // Canopy
-    const actor2 = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
-    actor2.blendMode = "alpha";
-    this.actors.push(actor2);
+    const canopy = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
+    canopy.blendMode = "alpha";
+    this.actors.push(canopy);
 
     // Smoke
     for (const point of fires) {
@@ -220,7 +227,21 @@ export class Application {
     this.waterProgram = new WaterProgram(gl);
     this.particleProgram = new ParticleProgram(gl);
     this.spriteProgram = new SpriteProgram(gl);
+    this.atmosphereProgram = new AtmosphereProgram(gl);
     
+    // Load quad geometry (for atmosphere rendering)
+    {
+      this.quadGeometry = new Mesh(gl, layouts.P, new Float32Array([
+        -1, -1, 0,
+         1, -1, 0,
+        -1,  1, 0,
+         1,  1, 0
+      ]).buffer, new Uint16Array([
+        0, 1, 2,
+        1, 3, 2
+      ]).buffer).slice(0, 6);
+    }
+
     // Load canopy geometry
     {
       const pointTrees: [number, number][] = this.trees.points;
@@ -365,6 +386,7 @@ export class Application {
     this.waterGeometry.mesh.dispose(gl);
     this.smokeGeometry.mesh.dispose(gl);
     this.fireGeometry.mesh.dispose(gl);
+    this.quadGeometry.mesh.dispose(gl);
   }
 
   private updateFrameUniforms(gl: WebGLRenderingContext, program: Program) {

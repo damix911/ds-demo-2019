@@ -9,6 +9,17 @@ export interface IAttribute {
 
 export type VertexLayout = (gl: WebGLRenderingContext) => IAttribute[];
 
+export const P = (gl: WebGLRenderingContext) => [
+  {
+    name: "a_position",
+    size: 3,
+    type: gl.FLOAT,
+    normalized: false,
+    stride: 12,
+    offset: 0
+  }
+];
+
 export const PS = (gl: WebGLRenderingContext) => [
   {
     name: "a_position",

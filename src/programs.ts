@@ -248,14 +248,8 @@ export class WaterProgram extends MaterialProgram {
       uniform float u_sunAzimuth;
       uniform vec3 u_sunColor;
       uniform vec3 u_skyColor;
-      // uniform float u_resolution;
-      // uniform float u_wind_angle;
-      // uniform float u_wind_speed;
       
-      const float u_resolution = 1.1943285668550503;//38.21851414253662;//9.554628535634155;//0.5971642835598172;
-
-      const vec3 albedoDeep = vec3(25.0, 72.0, 75.0) / 255.0;
-      const vec3 albedoShallow = vec3(41.0, 113.0, 117.0) / 255.0;
+      const float u_resolution = 0.5971642835598172;
       const vec3 view = vec3(0.0, 0.0, 1.0);
       const float PI = 3.14159;
 
@@ -459,7 +453,6 @@ export class ParticleProgram extends MaterialProgram {
       uniform mat4 u_project;
       uniform float u_time;
       uniform vec4 u_animation_parameters;
-      uniform vec2 u_frame_size;
       uniform vec2 u_wind;
       uniform float u_period;
       uniform vec2 u_size_values;
@@ -498,14 +491,14 @@ export class ParticleProgram extends MaterialProgram {
         vec4 random = a_random;
         float phase = mod(u_time / u_period + random.z, 1.0);
         
-        float alpha = ease1(0.0, 0.3, phase, u_alpha_easing);
+        float alpha = ease1(0.0, 0.1, phase, u_alpha_easing);
         float size = ease1(u_size_values[0], u_size_values[1], phase, u_size_easing);
 
         mat4 viewModel = u_view * u_model;
-        gl_Position = u_project * viewModel * a_position;
-        gl_Position.xy += 2.0 * (a_offset * size / u_frame_size) * gl_Position.w;
+        vec4 position = a_position + vec4(a_offset * size, 0.0, 0.0);
         float windAngle = u_wind[0] + (random.y - 0.5) * PI / 8.0;
-        gl_Position.xy += 0.1 * phase * u_wind[1] * vec2(cos(-windAngle), sin(-windAngle));
+        position.xy += 0.1 * phase * u_wind[1] * vec2(cos(-windAngle), sin(-windAngle));
+        gl_Position = u_project * viewModel * position;
         v_offset = a_offset;
         v_tint = vec4(1.0, 1.0, 1.0, alpha);
 
@@ -515,9 +508,7 @@ export class ParticleProgram extends MaterialProgram {
         float bt = 1.0 / u_animation_parameters[2];
         float is = mod(frame, u_animation_parameters[1]);
         float it = floor(frame / u_animation_parameters[2]);
-        // v_frame_coords = vec2(is * bs, it * bt);
         v_frame_coords = vec2(is * bs, 1.0 - (1.0 + it) * bt);
-        //v_frame_coords = vec2(0.0, 0.0);
       }
     `, `
       precision mediump float;
@@ -537,7 +528,6 @@ export class ParticleProgram extends MaterialProgram {
           color *= v_tint;
           color.rgb *= color.a;
           gl_FragColor = color;
-          // gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
       }
     `, {
       "a_position": 0,
@@ -632,8 +622,8 @@ export class SpriteProgram extends MaterialProgram {
 
       void main(void) {
         mat4 viewModel = u_view * u_model;
-        gl_Position = u_project * viewModel * a_position;
-        gl_Position.xy += 2.0 * (a_offset * u_size / u_frame_size) * gl_Position.w;
+        vec4 position = a_position + vec4(a_offset * u_size, 0.0, 0.0);
+        gl_Position = u_project * viewModel * position;
         v_offset = a_offset;
 
         // Animation frame
@@ -710,4 +700,57 @@ export class SpriteProgram extends MaterialProgram {
   }
 }
 
-export type Program = CanopyProgram | WaterProgram | ParticleProgram | SpriteProgram;
+export class AtmosphereProgram extends BaseProgram {
+  private sunElevationLocation: WebGLUniformLocation;
+  private sunAzimuthLocation: WebGLUniformLocation;
+  private sunColorLocation: WebGLUniformLocation;
+  private skyColorLocation: WebGLUniformLocation;
+
+  constructor(gl: WebGLRenderingContext) {
+    super(gl, `
+      precision highp float;
+
+      attribute vec4 a_position;
+
+      uniform float u_sunElevation;
+      uniform float u_sunAzimuth;
+      uniform vec3 u_sunColor;
+      uniform vec3 u_skyColor;
+
+      varying vec4 v_color;
+
+      void main(void) {
+        vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
+
+        float alpha = 0.2;
+        v_color = vec4(u_skyColor * alpha, alpha);
+
+        gl_Position = a_position;
+      }
+    `, `
+      precision highp float;
+
+      varying vec4 v_color;
+
+      void main() {
+          gl_FragColor = v_color;
+      }
+    `, {
+      "a_position": 0
+    });
+
+    this.sunAzimuthLocation = this.getUniformLocation(gl, "u_sunAzimuth");
+    this.sunElevationLocation = this.getUniformLocation(gl, "u_sunElevation");
+    this.sunColorLocation = this.getUniformLocation(gl, "u_sunColor");
+    this.skyColorLocation = this.getUniformLocation(gl, "u_skyColor");
+  }
+
+  updateAtmosphere(gl: WebGLRenderingContext, sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
+    gl.uniform1f(this.sunElevationLocation, sunElevation);
+    gl.uniform1f(this.sunAzimuthLocation, sunAzimuth);
+    gl.uniform3fv(this.sunColorLocation, sunColor);
+    gl.uniform3fv(this.skyColorLocation, skyColor);
+  }
+}
+
+export type Program = CanopyProgram | WaterProgram | ParticleProgram | SpriteProgram | AtmosphereProgram;
