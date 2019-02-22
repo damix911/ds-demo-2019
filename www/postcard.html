@@ -121,6 +121,12 @@
       animation-duration: 0.2s;
       pointer-events: all;
     }
+
+    #lighting {
+      position: absolute;
+      left: 10em;
+      top: 0;
+    }
   </style>
 
   <script>
@@ -155,6 +161,8 @@
         },
 
         detach: function() {
+          this.app.dispose();
+          this.app = null;
         },
 
         toRGB: function(hexColor) {
@@ -195,8 +203,7 @@
 
         constructor() {
           this.windAngle = 20;
-          this.windSpeed = 400;
-          
+          this.windSpeed = 100;
           this.sunElevation = 0;
           this.sunAzimuth = 0;
           this.sunColor = "#f0f0c0";
@@ -215,10 +222,29 @@
 
       var layer = new CustomLayer();
 
+      function setupLightingHandler(btnId, params) {
+        var btn = document.getElementById(btnId);
+        btn.addEventListener("click", function () {
+          layer.windAngle = params.windAngle;
+          layer.windSpeed = params.windSpeed;
+          layer.sunElevation = params.sunElevation;
+          layer.sunAzimuth = params.sunAzimuth;
+          layer.sunColor = params.sunColor;
+          layer.skyColor = params.skyColor;
+
+          // gui.load(params);
+        });
+      };
+
       var map = new Map({
         basemap: "satellite",
         layers: [layer]
       });
+
+      // DEBUG ONLY!!!
+      // setTimeout(function () {
+      //   map.layers.remove(layer);
+      // }, 10000);
 
       var view = new MapView({
         container: "viewDiv",
@@ -227,16 +253,12 @@
           -94.673,
            38.51
         ],
-        // zoom: 17
         zoom: 18
-        // center: [-94.675099, 38.505984],
-        // zoom: 15
       });
 
       window.points = [];
 
       view.on("click", function (evt) {
-        console.log(JSON.stringify({x: evt.mapPoint.x, y: evt.mapPoint.y}));
         window.points.push([evt.mapPoint.x, evt.mapPoint.y]);
       });
 
@@ -244,6 +266,34 @@
       var flash = document.getElementById("flash");
       var screen = document.getElementById("screen");
       var photo = document.getElementById("photo");
+      setupLightingHandler("btnDawn", {
+        windAngle: 20,
+        windSpeed: 100,
+        sunElevation: 0,
+        sunAzimuth: 0,
+        sunColor: "#f0f0c0",
+        skyColor: "#19484b"
+      });
+      setupLightingHandler("btnMorningFair", {
+        windAngle: 20,
+        windSpeed: 500,
+        sunElevation: 0,
+        sunAzimuth: 0,
+        sunColor: "#f0f0c0",
+        skyColor: "#19484b"
+      });
+      setupLightingHandler("btnMorningOvercast", {
+
+      });
+      setupLightingHandler("btnNoon", {
+
+      });
+      setupLightingHandler("btnSunset", {
+
+      });
+      setupLightingHandler("btnNight", {
+
+      });
 
       flash.addEventListener("animationend", function () {
         this.className = "";
@@ -267,9 +317,7 @@
         });
       }
 
-      var gui = new dat.GUI({
-        height: 5 * 32 - 1
-      });
+      var gui = new dat.GUI();
       gui.add(layer, "windSpeed");
       gui.add(layer, "windAngle");
       gui.add(layer, "sunElevation");
@@ -286,5 +334,13 @@
   <div id="screen"></div>
   <div id="flash"></div>
   <img id="photo">
+  <div id="lighting">
+    <button id="btnDawn">Dawn</button>
+    <button id="btnMorningFair">Morning (Fair)</button>
+    <button id="btnMorningOvercast">Morning (Overcast)</button>
+    <button id="btnNoon">Noon</button>
+    <button id="btnSunset">Sunset</button>
+    <button id="btnNight">Night</button>
+  </div>
 </body>
 </html>

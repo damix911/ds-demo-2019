@@ -37,117 +37,117 @@ export abstract class MaterialProgram extends BaseProgram {
   protected abstract doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void;
 }
 
-export class StandardProgram extends MaterialProgram {
-  private modelLocation: WebGLUniformLocation;
-  private viewLocation: WebGLUniformLocation;
-  private projectLocation: WebGLUniformLocation;
-  private diffuseLocation: WebGLUniformLocation;
-  private normalLocation: WebGLUniformLocation;
+// export class StandardProgram extends MaterialProgram {
+//   private modelLocation: WebGLUniformLocation;
+//   private viewLocation: WebGLUniformLocation;
+//   private projectLocation: WebGLUniformLocation;
+//   private diffuseLocation: WebGLUniformLocation;
+//   private normalLocation: WebGLUniformLocation;
 
-  constructor(gl: WebGLRenderingContext) {
-    super(gl, `
-      precision mediump float;
+//   constructor(gl: WebGLRenderingContext) {
+//     super(gl, `
+//       precision mediump float;
 
-      attribute vec4 a_position;
-      attribute vec2 a_texcoord;
-      attribute vec3 a_tangent;
-      attribute vec3 a_binormal;
-      attribute vec3 a_normal;
+//       attribute vec4 a_position;
+//       attribute vec2 a_texcoord;
+//       attribute vec3 a_tangent;
+//       attribute vec3 a_binormal;
+//       attribute vec3 a_normal;
 
-      uniform mat4 u_model;
-      uniform mat4 u_view;
-      uniform mat4 u_project;
+//       uniform mat4 u_model;
+//       uniform mat4 u_view;
+//       uniform mat4 u_project;
 
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_tangent;
-      varying vec3 v_binormal;
-      varying vec3 v_normal;
+//       varying vec2 v_texcoord;
+//       varying vec3 v_eye;
+//       varying vec3 v_tangent;
+//       varying vec3 v_binormal;
+//       varying vec3 v_normal;
 
-      void main(void) {
-        mat4 viewModel = u_view * u_model;
-        mat3 viewModel3 = mat3(viewModel);
+//       void main(void) {
+//         mat4 viewModel = u_view * u_model;
+//         mat3 viewModel3 = mat3(viewModel);
 
-        gl_Position = u_project * viewModel * a_position;
+//         gl_Position = u_project * viewModel * a_position;
         
-        v_texcoord = a_texcoord;
+//         v_texcoord = a_texcoord;
         
 
-        v_eye = -(viewModel * a_position).xyz;
-        v_tangent = viewModel3 * a_tangent;
-        v_binormal = viewModel3 * a_binormal;
-        v_normal = viewModel3 * a_normal;
+//         v_eye = -(viewModel * a_position).xyz;
+//         v_tangent = viewModel3 * a_tangent;
+//         v_binormal = viewModel3 * a_binormal;
+//         v_normal = viewModel3 * a_normal;
 
-        if (dot(v_eye, v_normal) < 0.0) {
-          v_normal = -v_normal;
-        }
-      }
-    `, `
-      precision mediump float;
+//         if (dot(v_eye, v_normal) < 0.0) {
+//           v_normal = -v_normal;
+//         }
+//       }
+//     `, `
+//       precision mediump float;
 
-      uniform sampler2D u_diffuse;
-      uniform sampler2D u_normal;
+//       uniform sampler2D u_diffuse;
+//       uniform sampler2D u_normal;
 
-      varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_tangent;
-      varying vec3 v_binormal;
-      varying vec3 v_normal;
+//       varying vec2 v_texcoord;
+//       varying vec3 v_eye;
+//       varying vec3 v_tangent;
+//       varying vec3 v_binormal;
+//       varying vec3 v_normal;
 
-      void main(void) {
-        mat3 tbn = mat3(v_tangent, v_binormal, v_normal);
-        vec3 sampled = texture2D(u_normal, v_texcoord).rgb;
-        vec3 normal = normalize(tbn * (sampled * 2.0 - 1.0));
-        vec4 diffuse = texture2D(u_diffuse, v_texcoord);
+//       void main(void) {
+//         mat3 tbn = mat3(v_tangent, v_binormal, v_normal);
+//         vec3 sampled = texture2D(u_normal, v_texcoord).rgb;
+//         vec3 normal = normalize(tbn * (sampled * 2.0 - 1.0));
+//         vec4 diffuse = texture2D(u_diffuse, v_texcoord);
 
-        vec3 eye = normalize(v_eye);
+//         vec3 eye = normalize(v_eye);
         
-        vec3 light = eye;
-        //vec3 light = vec3(0.0, 1.0, 0.0);
+//         vec3 light = eye;
+//         //vec3 light = vec3(0.0, 1.0, 0.0);
 
-        float d = clamp(dot(normal, light), 0.0, 1.0);
-        float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
+//         float d = clamp(dot(normal, light), 0.0, 1.0);
+//         float s = pow(clamp(dot(reflect(-light, normal), eye), 0.0, 1.0), 10.0);
 
-        gl_FragColor = vec4(diffuse.rgb * (0.3 + 0.3 * d) + vec3(0.4 * s), diffuse.a);
-        gl_FragColor.rgb *= gl_FragColor.a;
-      }
-    `, {
-      "a_position": 0,
-      "a_texcoord": 1,
-      "a_tangent": 2,
-      "a_binormal": 3,
-      "a_normal": 4
-    });
+//         gl_FragColor = vec4(diffuse.rgb * (0.3 + 0.3 * d) + vec3(0.4 * s), diffuse.a);
+//         gl_FragColor.rgb *= gl_FragColor.a;
+//       }
+//     `, {
+//       "a_position": 0,
+//       "a_texcoord": 1,
+//       "a_tangent": 2,
+//       "a_binormal": 3,
+//       "a_normal": 4
+//     });
 
-    this.modelLocation = this.getUniformLocation(gl, "u_model");
-    this.viewLocation = this.getUniformLocation(gl, "u_view");
-    this.projectLocation = this.getUniformLocation(gl, "u_project");
-    this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
-    this.normalLocation = this.getUniformLocation(gl, "u_normal");
-  }
+//     this.modelLocation = this.getUniformLocation(gl, "u_model");
+//     this.viewLocation = this.getUniformLocation(gl, "u_view");
+//     this.projectLocation = this.getUniformLocation(gl, "u_project");
+//     this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
+//     this.normalLocation = this.getUniformLocation(gl, "u_normal");
+//   }
 
-  updateView(gl: WebGLRenderingContext, view: mat4) {
-    gl.uniformMatrix4fv(this.viewLocation, false, view);
-  }
+//   updateView(gl: WebGLRenderingContext, view: mat4) {
+//     gl.uniformMatrix4fv(this.viewLocation, false, view);
+//   }
 
-  updateModel(gl: WebGLRenderingContext, model: mat4) {
-    gl.uniformMatrix4fv(this.modelLocation, false, model);
-  }
+//   updateModel(gl: WebGLRenderingContext, model: mat4) {
+//     gl.uniformMatrix4fv(this.modelLocation, false, model);
+//   }
 
-  updateProject(gl: WebGLRenderingContext, project: mat4) {
-    gl.uniformMatrix4fv(this.projectLocation, false, project);
-  }
+//   updateProject(gl: WebGLRenderingContext, project: mat4) {
+//     gl.uniformMatrix4fv(this.projectLocation, false, project);
+//   }
 
-  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, material.diffuse);
-    gl.uniform1i(this.diffuseLocation, 0);
+//   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+//     gl.activeTexture(gl.TEXTURE0);
+//     gl.bindTexture(gl.TEXTURE_2D, material.diffuse);
+//     gl.uniform1i(this.diffuseLocation, 0);
 
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, material.normal);
-    gl.uniform1i(this.normalLocation, 1);
-  }
-}
+//     gl.activeTexture(gl.TEXTURE1);
+//     gl.bindTexture(gl.TEXTURE_2D, material.normal);
+//     gl.uniform1i(this.normalLocation, 1);
+//   }
+// }
 
 export class CanopyProgram extends MaterialProgram {
   private modelLocation: WebGLUniformLocation;
@@ -156,6 +156,10 @@ export class CanopyProgram extends MaterialProgram {
   private diffuseLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
   private windLocation: WebGLUniformLocation;
+  private sunAzimuthLocation: WebGLUniformLocation;
+  private sunElevationLocation: WebGLUniformLocation;
+  private sunColorLocation: WebGLUniformLocation;
+  private skyColorLocation: WebGLUniformLocation;
 
   constructor(gl: WebGLRenderingContext) {
     super(gl, `
@@ -171,10 +175,14 @@ export class CanopyProgram extends MaterialProgram {
       uniform mat4 u_view;
       uniform mat4 u_project;
       uniform vec2 u_wind;
+      uniform float u_sunAzimuth;
+      uniform float u_sunElevation;
+      uniform vec3 u_sunColor;
+      uniform vec3 u_skyColor;
 
+      varying vec2 v_offset;
       varying vec2 v_texcoord;
       varying vec3 v_eye;
-      varying float v_darken;
       varying vec3 v_random;
 
       float rand(vec2 n) { 
@@ -203,12 +211,12 @@ export class CanopyProgram extends MaterialProgram {
         // position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
         // position.xy += 5.0 * (a_random.xy - 0.5);
 
-        float bend = 0.01*(a_position.z / 10.0) * (cos(u_time) + 1.0);
+        float bend = 0.01*(a_position.z / 10.0) * (cos(u_time + r * 10.0) + 1.0);
         position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
         
         vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
-        float c = cos(r * 2.0 * 3.1415);
-        float s = sin(r * 2.0 * 3.1415);
+        float c = cos(r * 2.0 * 3.1415 + 0.1 * cos(0.5 * u_time + r * 10.0));
+        float s = sin(r * 2.0 * 3.1415 + 0.1 * cos(0.5 * u_time + r * 10.0));
         vec2 rotated_offset = vec2(
           c * offset.x + s * offset.y,
          -s * offset.x + c * offset.y
@@ -220,12 +228,11 @@ export class CanopyProgram extends MaterialProgram {
 
         gl_Position = u_project * viewModel * position;
         
+        v_offset = rotated_offset;
         v_texcoord = a_texcoord;
         
 
         v_eye = -(viewModel * a_position).xyz;
-
-        v_darken = 0.3 + 0.7 * r;
         
         v_random = a_random;
       }
@@ -234,18 +241,22 @@ export class CanopyProgram extends MaterialProgram {
 
       uniform float u_time;
       uniform sampler2D u_diffuse;
-      uniform sampler2D u_normal;
+      uniform float u_sunElevation;
+      uniform float u_sunAzimuth;
+      uniform vec3 u_sunColor;
+      uniform vec3 u_skyColor;
 
+      varying vec2 v_offset;
       varying vec2 v_texcoord;
-      varying vec3 v_eye;
-      varying vec3 v_tangent;
-      varying vec3 v_binormal;
-      varying float v_darken;
       varying vec3 v_random;
 
       void main(void) {
+        vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
+        float d = clamp(dot(normalize(light_dir.xy), normalize(v_offset)), 0.0, 1.0);
+        
         vec4 diffuse = texture2D(u_diffuse, v_texcoord);
-        gl_FragColor = diffuse;
+        vec3 color = diffuse.rgb * (d * u_sunColor + u_skyColor);
+        gl_FragColor = vec4(color, diffuse.a);
         gl_FragColor.rgb *= gl_FragColor.a;
       }
     `, {
@@ -261,6 +272,10 @@ export class CanopyProgram extends MaterialProgram {
     this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
     this.timeLocation = this.getUniformLocation(gl, "u_time");
     this.windLocation = this.getUniformLocation(gl, "u_wind");
+    this.sunAzimuthLocation = this.getUniformLocation(gl, "u_sunAzimuth");
+    this.sunElevationLocation = this.getUniformLocation(gl, "u_sunElevation");
+    this.sunColorLocation = this.getUniformLocation(gl, "u_sunColor");
+    this.skyColorLocation = this.getUniformLocation(gl, "u_skyColor");
   }
 
   updateView(gl: WebGLRenderingContext, view: mat4) {
@@ -283,6 +298,13 @@ export class CanopyProgram extends MaterialProgram {
     gl.uniform2f(this.windLocation, angle, speed);
   }
 
+  updateAtmosphere(gl: WebGLRenderingContext, sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
+    gl.uniform1f(this.sunElevationLocation, sunElevation);
+    gl.uniform1f(this.sunAzimuthLocation, sunAzimuth);
+    gl.uniform3fv(this.sunColorLocation, sunColor);
+    gl.uniform3fv(this.skyColorLocation, skyColor);
+  }
+
   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, material.diffuse);
@@ -296,7 +318,10 @@ export class WaterProgram extends MaterialProgram {
   private projectLocation: WebGLUniformLocation;
   private timeLocation: WebGLUniformLocation;
   private wavesLocation: WebGLUniformLocation;
+  private diffuseLocation: WebGLUniformLocation;
   private windLocation: WebGLUniformLocation;
+  private sunElevationLocation: WebGLUniformLocation;
+  private sunAzimuthLocation: WebGLUniformLocation;
   private sunColorLocation: WebGLUniformLocation;
   private skyColorLocation: WebGLUniformLocation;
 
@@ -329,16 +354,17 @@ export class WaterProgram extends MaterialProgram {
       
       uniform float u_time;
       uniform sampler2D u_waves;
+      uniform vec3 u_diffuse;
       uniform vec2 u_wind;
+      uniform float u_sunElevation;
+      uniform float u_sunAzimuth;
       uniform vec3 u_sunColor;
       uniform vec3 u_skyColor;
       // uniform float u_resolution;
-      // uniform vec3 u_light_dir;
       // uniform float u_wind_angle;
       // uniform float u_wind_speed;
       
       const float u_resolution = 1.1943285668550503;//38.21851414253662;//9.554628535634155;//0.5971642835598172;
-      const vec3 u_light_dir = normalize(vec3(1.0, 1.0, 1.0));
 
       const vec3 albedoDeep = vec3(25.0, 72.0, 75.0) / 255.0;
       const vec3 albedoShallow = vec3(41.0, 113.0, 117.0) / 255.0;
@@ -434,6 +460,8 @@ export class WaterProgram extends MaterialProgram {
       }
 
       void main() {
+          vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
+
           float step = u_resolution;
 
           float hL = getHeight(v_position + vec2(-step, 0.0));
@@ -443,12 +471,14 @@ export class WaterProgram extends MaterialProgram {
           float dx = hR - hL;
           float dy = hU - hD;
 
-          vec3 normal = normalize(vec3(-dx, -dy, 1.5));
-          vec3 r = reflect(-u_light_dir, normal);
-          float fresnel = 1.0 - dot(normal, view);
-          float s = pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
+
+          vec3 normal = normalize(vec3(-dx, -dy, 0.2));
+          vec3 r = reflect(-light_dir, normal);
+          float fresnel = pow(1.0 - dot(normal, view), 1.0);
+          float s = fresnel * pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
           // vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * u_sun;
-          vec3 waterColor = mix(albedoShallow, u_skyColor, v_scalar) + s * u_sunColor;
+          // vec3 waterColor = mix(albedoShallow, u_skyColor, v_scalar) + s * u_sunColor;
+          vec3 waterColor = u_diffuse + s * u_sunColor;
           float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
           vec4 color = vec4(waterColor * alpha, alpha);
           gl_FragColor = color;
@@ -456,6 +486,9 @@ export class WaterProgram extends MaterialProgram {
           // gl_FragColor = texture2D(u_waves, v_position / 5000.0);
           // gl_FragColor = vec4(0.5 * getHeight(v_position), 0.0, 0.0, 1.0);
           // gl_FragColor = getDebugColor(v_position);
+
+          // gl_FragColor = vec4(fresnel, 0.0, 0.0, 1.0);
+          // gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
       }
     `, {
       "a_position": 0,
@@ -467,7 +500,10 @@ export class WaterProgram extends MaterialProgram {
     this.projectLocation = this.getUniformLocation(gl, "u_project");
     this.timeLocation = this.getUniformLocation(gl, "u_time");
     this.wavesLocation = this.getUniformLocation(gl, "u_waves");
+    this.diffuseLocation = this.getUniformLocation(gl, "u_diffuse");
     this.windLocation = this.getUniformLocation(gl, "u_wind");
+    this.sunAzimuthLocation = this.getUniformLocation(gl, "u_sunAzimuth");
+    this.sunElevationLocation = this.getUniformLocation(gl, "u_sunElevation");
     this.sunColorLocation = this.getUniformLocation(gl, "u_sunColor");
     this.skyColorLocation = this.getUniformLocation(gl, "u_skyColor");
   }
@@ -493,6 +529,8 @@ export class WaterProgram extends MaterialProgram {
   }
 
   updateAtmosphere(gl: WebGLRenderingContext, sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
+    gl.uniform1f(this.sunElevationLocation, sunElevation);
+    gl.uniform1f(this.sunAzimuthLocation, sunAzimuth);
     gl.uniform3fv(this.sunColorLocation, sunColor);
     gl.uniform3fv(this.skyColorLocation, skyColor);
   }
@@ -501,95 +539,97 @@ export class WaterProgram extends MaterialProgram {
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, material.waves);
     gl.uniform1i(this.wavesLocation, 0);
+
+    gl.uniform3fv(this.diffuseLocation, material.diffuse);
   }
 }
 
-export class GrassProgram extends MaterialProgram {
-  private modelLocation: WebGLUniformLocation;
-  private viewLocation: WebGLUniformLocation;
-  private projectLocation: WebGLUniformLocation;
-  private timeLocation: WebGLUniformLocation;
-  private grassLocation: WebGLUniformLocation;
-  private dirtLocation: WebGLUniformLocation;
+// export class GrassProgram extends MaterialProgram {
+//   private modelLocation: WebGLUniformLocation;
+//   private viewLocation: WebGLUniformLocation;
+//   private projectLocation: WebGLUniformLocation;
+//   private timeLocation: WebGLUniformLocation;
+//   private grassLocation: WebGLUniformLocation;
+//   private dirtLocation: WebGLUniformLocation;
 
-  constructor(gl: WebGLRenderingContext) {
-    super(gl, `
-      precision mediump float;
+//   constructor(gl: WebGLRenderingContext) {
+//     super(gl, `
+//       precision mediump float;
 
-      attribute vec4 a_position;
-      attribute float a_scalar;
+//       attribute vec4 a_position;
+//       attribute float a_scalar;
 
-      uniform mat4 u_model;
-      uniform mat4 u_view;
-      uniform mat4 u_project;
+//       uniform mat4 u_model;
+//       uniform mat4 u_view;
+//       uniform mat4 u_project;
 
-      varying vec2 v_position;
-      varying float v_scalar;
+//       varying vec2 v_position;
+//       varying float v_scalar;
 
-      void main(void) {
-        mat4 viewModel = u_view * u_model;
-        gl_Position = u_project * viewModel * a_position;
-        v_position = a_position.xy;
-        v_scalar = a_scalar;
-      }
-    `, `
-      precision mediump float;
+//       void main(void) {
+//         mat4 viewModel = u_view * u_model;
+//         gl_Position = u_project * viewModel * a_position;
+//         v_position = a_position.xy;
+//         v_scalar = a_scalar;
+//       }
+//     `, `
+//       precision mediump float;
 
-      varying vec2 v_position;
-      varying float v_scalar;
+//       varying vec2 v_position;
+//       varying float v_scalar;
 
-      uniform float u_time;
-      uniform sampler2D u_grass;
-      uniform sampler2D u_dirt;
+//       uniform float u_time;
+//       uniform sampler2D u_grass;
+//       uniform sampler2D u_dirt;
       
-      void main() {
-        vec3 grass = texture2D(u_grass, v_position / 150.0).rgb;
-        vec3 dirt = texture2D(u_dirt, v_position / 150.0).rgb;
-        vec3 mixed = mix(dirt, grass, v_scalar);
-        float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
-        vec4 color = vec4(mixed * alpha, alpha);
+//       void main() {
+//         vec3 grass = texture2D(u_grass, v_position / 150.0).rgb;
+//         vec3 dirt = texture2D(u_dirt, v_position / 150.0).rgb;
+//         vec3 mixed = mix(dirt, grass, v_scalar);
+//         float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
+//         vec4 color = vec4(mixed * alpha, alpha);
 
-        gl_FragColor = color;
-      }
-    `, {
-      "a_position": 0,
-      "a_scalar": 1
-    });
+//         gl_FragColor = color;
+//       }
+//     `, {
+//       "a_position": 0,
+//       "a_scalar": 1
+//     });
 
-    this.modelLocation = this.getUniformLocation(gl, "u_model");
-    this.viewLocation = this.getUniformLocation(gl, "u_view");
-    this.projectLocation = this.getUniformLocation(gl, "u_project");
-    this.timeLocation = this.getUniformLocation(gl, "u_time");
-    this.grassLocation = this.getUniformLocation(gl, "u_grass");
-    this.dirtLocation = this.getUniformLocation(gl, "u_dirt");
-  }
+//     this.modelLocation = this.getUniformLocation(gl, "u_model");
+//     this.viewLocation = this.getUniformLocation(gl, "u_view");
+//     this.projectLocation = this.getUniformLocation(gl, "u_project");
+//     this.timeLocation = this.getUniformLocation(gl, "u_time");
+//     this.grassLocation = this.getUniformLocation(gl, "u_grass");
+//     this.dirtLocation = this.getUniformLocation(gl, "u_dirt");
+//   }
 
-  updateView(gl: WebGLRenderingContext, view: mat4) {
-    gl.uniformMatrix4fv(this.viewLocation, false, view);
-  }
+//   updateView(gl: WebGLRenderingContext, view: mat4) {
+//     gl.uniformMatrix4fv(this.viewLocation, false, view);
+//   }
 
-  updateModel(gl: WebGLRenderingContext, model: mat4) {
-    gl.uniformMatrix4fv(this.modelLocation, false, model);
-  }
+//   updateModel(gl: WebGLRenderingContext, model: mat4) {
+//     gl.uniformMatrix4fv(this.modelLocation, false, model);
+//   }
 
-  updateProject(gl: WebGLRenderingContext, project: mat4) {
-    gl.uniformMatrix4fv(this.projectLocation, false, project);
-  }
+//   updateProject(gl: WebGLRenderingContext, project: mat4) {
+//     gl.uniformMatrix4fv(this.projectLocation, false, project);
+//   }
 
-  updateTime(gl: WebGLRenderingContext, time: number) {
-    gl.uniform1f(this.timeLocation, time);
-  }
+//   updateTime(gl: WebGLRenderingContext, time: number) {
+//     gl.uniform1f(this.timeLocation, time);
+//   }
 
-  protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
-    gl.activeTexture(gl.TEXTURE0);
-    gl.bindTexture(gl.TEXTURE_2D, material.grass);
-    gl.uniform1i(this.grassLocation, 0);
+//   protected doUpdateMaterial(gl: WebGLRenderingContext, material: Material): void {
+//     gl.activeTexture(gl.TEXTURE0);
+//     gl.bindTexture(gl.TEXTURE_2D, material.grass);
+//     gl.uniform1i(this.grassLocation, 0);
 
-    gl.activeTexture(gl.TEXTURE1);
-    gl.bindTexture(gl.TEXTURE_2D, material.dirt);
-    gl.uniform1i(this.dirtLocation, 1);
-  }
-}
+//     gl.activeTexture(gl.TEXTURE1);
+//     gl.bindTexture(gl.TEXTURE_2D, material.dirt);
+//     gl.uniform1i(this.dirtLocation, 1);
+//   }
+// }
 
 // export class AmbientProgram {
 //   private modelLocation: WebGLUniformLocation;
@@ -789,7 +829,7 @@ export class GrassProgram extends MaterialProgram {
 
 
 
-export class SmokeProgram extends MaterialProgram {
+export class ParticleProgram extends MaterialProgram {
   private modelLocation: WebGLUniformLocation;
   private viewLocation: WebGLUniformLocation;
   private projectLocation: WebGLUniformLocation;
@@ -1067,4 +1107,4 @@ export class SpriteProgram extends MaterialProgram {
   }
 }
 
-export type Program = StandardProgram | CanopyProgram | WaterProgram | GrassProgram | SmokeProgram | SpriteProgram;
+export type Program = CanopyProgram | WaterProgram | ParticleProgram | SpriteProgram;

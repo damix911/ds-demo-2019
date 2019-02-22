@@ -2,7 +2,7 @@ import { loadImage, createTexture, loadJson } from "./misc";
 import { Actor } from "./scene";
 import { mat4, vec4, vec2, vec3 } from "gl-matrix";
 import { Mesh, IGeometry } from "./meshes";
-import { Program, Material, CanopyProgram, WaterProgram, SmokeProgram, SpriteProgram } from "./programs";
+import { Program, Material, CanopyProgram, WaterProgram, ParticleProgram, SpriteProgram } from "./programs";
 import * as layouts from "./layouts";
 import { createCanopyMesh } from "./geometries";
 import { origin } from "./defs";
@@ -25,7 +25,7 @@ export class Application {
   // Programs
   private canopyProgram: Program;
   private waterProgram: Program;
-  private smokeProgram: Program;
+  private particleProgram: Program;
   private spriteProgram: Program;
 
   // Materials
@@ -90,7 +90,6 @@ export class Application {
   }
 
   setPixelRatio(pixelRatio: number): void {
-    // console.log("pixelRatio", pixelRatio);
     this.pixelRatio = pixelRatio;
   }
 
@@ -190,7 +189,7 @@ export class Application {
 
 
     for (const point of fires) {
-      const smoke = new Actor(this.smokeGeometry, this.smokeProgram, this.smoke);
+      const smoke = new Actor(this.smokeGeometry, this.particleProgram, this.smoke);
       smoke.blendMode = "alpha";
       this.actors.push(smoke);
       mat4.translate(smoke.model, smoke.model, [point[0] - origin[0], point[1] - origin[1], 0]);
@@ -219,7 +218,8 @@ export class Application {
     };
 
     this.water = {
-      waves: this.wavesTexture
+      waves: this.wavesTexture,
+      diffuse: [25.0 / 255, 72.0 / 255, 75.0 / 255]
     };
 
     this.smoke = {
@@ -250,7 +250,7 @@ export class Application {
     // Programs
     this.canopyProgram = new CanopyProgram(gl);
     this.waterProgram = new WaterProgram(gl);
-    this.smokeProgram = new SmokeProgram(gl);
+    this.particleProgram = new ParticleProgram(gl);
     this.spriteProgram = new SpriteProgram(gl);
     
     // Load canopy geometry
