@@ -1,7 +1,7 @@
 import { Mesh } from "./meshes";
 import { PTOR } from "./layouts";
 
-export function createCanopyMesh(gl: WebGLRenderingContext, trees: any[], particlesPerTree: number): Mesh {
+export function createCanopyMesh(gl: WebGLRenderingContext, trees: { x: number, y: number }[], particlesPerTree: number): Mesh {
   const vertexData: number[] = [];
   const indexData: number[] = [];
 

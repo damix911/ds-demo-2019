@@ -86,10 +86,6 @@ export class Application {
     this.trees = await loadJson("assets/tree-positions.json");
   }
 
-  setPixelRatio(pixelRatio: number): void {
-    this.pixelRatio = pixelRatio;
-  }
-
   setWind(windAngle: number, windSpeed: number) {
     this.windAngle = windAngle;
     this.windSpeed = windSpeed;
@@ -136,19 +132,15 @@ export class Application {
   }
 
   private doUpdate() {
-    const actor = this.actors[0];
-
-    mat4.identity(actor.model);
-    mat4.translate(actor.model, actor.model, [0, 0, 0]);
-    // mat4.rotateY(actor.model, actor.model, 0.1 * Math.cos(performance.now() / 1000.0));
-    // mat4.rotateX(actor.model, actor.model, 0.1 * Math.cos(1.0 + 0.7 * performance.now() / 1000.0));
   }
 
   private sceneSetup() {
-    // const actor1 = new Actor(this.groundMesh.slice(0, 18), this.standardProgram, this.rock);
-    // this.actors.push(actor1);
+    // Water
+    const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
+    water.blendMode = "alpha";
+    this.actors.push(water);
 
-
+    // Fires
     const fires = [
       [-10539069.286145981, 4651690.313822922],
       [-10539274.561368467, 4651743.013570938],
@@ -160,10 +152,6 @@ export class Application {
       [-10538974.78489812, 4651836.171199174]
     ];
 
-    const water = new Actor(this.waterGeometry, this.waterProgram, this.water);
-    water.blendMode = "alpha";
-    this.actors.push(water);
-
     for (const point of fires) {
       const fire = new Actor(this.fireGeometry, this.spriteProgram, this.fire);
       fire.blendMode = "add";
@@ -171,34 +159,18 @@ export class Application {
       mat4.translate(fire.model, fire.model, [point[0] - origin[0], point[1] - origin[1], 0]);
     }
 
+    // Canopy
     const actor2 = new Actor(this.canopyGeometry, this.canopyProgram, this.canopy);
     actor2.blendMode = "alpha";
     this.actors.push(actor2);
 
-    // const grass = new Actor(this.grassMesh.slice(0, 30), this.grassProgram, this.grass);
-    // grass.blendMode = "alpha";
-    // this.actors.push(grass);
-
-
-
-
-
-
-
+    // Smoke
     for (const point of fires) {
       const smoke = new Actor(this.smokeGeometry, this.particleProgram, this.smoke);
       smoke.blendMode = "alpha";
       this.actors.push(smoke);
       mat4.translate(smoke.model, smoke.model, [point[0] - origin[0], point[1] - origin[1], 0]);
     }
-
-    // const actor6 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
-    // this.actors.push(actor6);
-    // mat4.translate(actor6.model, actor6.model, [0, 120, 0]);
-
-    // const actor7 = new Actor(this.smokeMesh.slice(0, 6), this.smokeProgram, this.smoke);
-    // this.actors.push(actor7);
-    // mat4.translate(actor7.model, actor7.model, [0, 240, 0]);
   }
 
   private doInitialize(gl: WebGLRenderingContext) {
@@ -261,7 +233,7 @@ export class Application {
       this.canopyGeometry = createCanopyMesh(gl, trees, particlesPerTree).slice(0, trees.length * particlesPerTree * 6);
     }
 
-    // Load lake geometry.
+    // Load lake geometry
     {
       const flattened = earcut.flatten(this.middleCreek.feature.geometry.rings);
       const indices = earcut(flattened.vertices, flattened.holes, flattened.dimensions);
@@ -340,16 +312,12 @@ export class Application {
     this.translation[2] = -far;
     mat4.translate(this.view, this.view, this.translation);
 
-    const W = (this.resolution * (this.size[0]) / (far / near));// * this.pixelRatio;
-    const H = (this.resolution * (this.size[1]) / (far / near));// * this.pixelRatio;
-    // const Wover2 = (this.resolution * (gl.canvas.width / 2) / (far / near)) / this.pixelRatio;
-    // const Hover2 = (this.resolution * (gl.canvas.height / 2) / (far / near)) / this.pixelRatio;
+    const W = (this.resolution * (this.size[0]) / (far / near));
+    const H = (this.resolution * (this.size[1]) / (far / near));
     mat4.frustum(this.project, -W / 2, W / 2, -H / 2, H / 2, near, far);
     gl.viewport(0, 0, this.size[0] * this.pixelRatio, this.size[1] * this.pixelRatio);
 
     this.framePrograms.clear();
-
-    // gl.enable(gl.DEPTH_TEST);
 
     for (const actor of this.actors) {
       if (actor.blendMode === "opaque") {
