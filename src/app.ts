@@ -360,9 +360,14 @@ export class Application {
 
         if (actor.blendMode === "add") {
           gl.blendFunc(gl.ONE, gl.ONE);
-        } else if (actor.blendMode === "alpha") {
+        } else if (actor.blendMode === "multiply") {
+          gl.blendFunc(gl.ONE, gl.SRC_COLOR);
+        }
+        else if (actor.blendMode === "alpha") {
           gl.blendFunc(gl.ONE, gl.ONE_MINUS_SRC_ALPHA);
         }
+
+        gl.blendEquation(gl.FUNC_ADD);
       }
 
       const mesh = actor.geometry.mesh;

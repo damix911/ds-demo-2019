@@ -1,3 +1,7 @@
+// Vertex and fragment shaders for animation and lighting.
+
+// GLSL noise algorithms adapted from https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83.
+
 import { createProgram } from "./misc";
 import { mat4, vec3 } from "gl-matrix";
 
@@ -65,13 +69,12 @@ export class CanopyProgram extends MaterialProgram {
       uniform vec2 u_wind;
       uniform float u_sunAzimuth;
       uniform float u_sunElevation;
-      uniform vec3 u_sunColor;
-      uniform vec3 u_skyColor;
 
       varying vec2 v_offset;
       varying vec2 v_texcoord;
       varying vec3 v_eye;
       varying vec3 v_random;
+      varying vec3 v_light_dir;
 
       float rand(vec2 n) { 
         return fract(sin(dot(n, vec2(12.9898, 4.1414))) * 43758.5453);
@@ -89,17 +92,15 @@ export class CanopyProgram extends MaterialProgram {
       }
 
       void main(void) {
+        v_light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
+
         float r = a_random.z;
 
         vec4 position = a_position;
-        //position.xy += vec2(cos(u_time + r * 10.0), sin(u_time + r * 10.0));
         vec2 xAxis = normalize(vec2(-1.0, 1.0));
         vec2 yAxis = vec2(-xAxis.y, xAxis.x);
-        // vec2 dir = xAxis * cos(0.2 * cos(1.7 * u_time + r * 10.0)) + yAxis * sin(0.2 * cos(1.7 * u_time + r * 10.0));
-        // position.xy += 2.0 * cos(u_time + r * 10.0) * dir;
-        // position.xy += 5.0 * (a_random.xy - 0.5);
 
-        float bend = 0.01*(a_position.z / 10.0) * (cos(u_time + r * 10.0) + 1.0);
+        float bend = 0.01 * (a_position.z / 10.0) * (cos(u_time + r * 10.0) + 1.0);
         position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
         
         vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
@@ -129,18 +130,16 @@ export class CanopyProgram extends MaterialProgram {
 
       uniform float u_time;
       uniform sampler2D u_diffuse;
-      uniform float u_sunElevation;
-      uniform float u_sunAzimuth;
       uniform vec3 u_sunColor;
       uniform vec3 u_skyColor;
 
       varying vec2 v_offset;
       varying vec2 v_texcoord;
       varying vec3 v_random;
+      varying vec3 v_light_dir;
 
       void main(void) {
-        vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
-        float d = clamp(dot(normalize(light_dir.xy), normalize(v_offset)), 0.0, 1.0);
+        float d = mix(clamp(dot(normalize(v_light_dir.xy), normalize(v_offset)), 0.0, 1.0), 1.0, pow(v_light_dir.z, 5.0));
         
         vec4 diffuse = texture2D(u_diffuse, v_texcoord);
         vec3 color = diffuse.rgb * (d * u_sunColor + u_skyColor);
@@ -223,11 +222,16 @@ export class WaterProgram extends MaterialProgram {
       uniform mat4 u_model;
       uniform mat4 u_view;
       uniform mat4 u_project;
+      uniform float u_sunElevation;
+      uniform float u_sunAzimuth;
 
       varying vec2 v_position;
       varying float v_scalar;
+      varying vec3 v_light_dir;
       
       void main(void) {
+        v_light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
+
         mat4 viewModel = u_view * u_model;
         gl_Position = u_project * viewModel * a_position;
 
@@ -239,13 +243,13 @@ export class WaterProgram extends MaterialProgram {
 
       varying vec2 v_position;
       varying float v_scalar;
+      varying vec3 v_light_dir;
+      varying vec3 v_color;
       
       uniform float u_time;
       uniform sampler2D u_waves;
       uniform vec3 u_diffuse;
       uniform vec2 u_wind;
-      uniform float u_sunElevation;
-      uniform float u_sunAzimuth;
       uniform vec3 u_sunColor;
       uniform vec3 u_skyColor;
       
@@ -297,8 +301,6 @@ export class WaterProgram extends MaterialProgram {
         float distanceFactor = exp(-1.0 * length(pos - source) / cellSide);
 
         return heightFactor * distanceFactor * intensityFactor * v_scalar;
-
-        // return heightFactor;
       }
 
       float sampleCell_SIMPLE(vec2 pos, vec2 cell, float cellSide) {
@@ -342,8 +344,6 @@ export class WaterProgram extends MaterialProgram {
       }
 
       void main() {
-          vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
-
           float step = u_resolution;
 
           float hL = getHeight(v_position + vec2(-step, 0.0));
@@ -355,22 +355,14 @@ export class WaterProgram extends MaterialProgram {
 
 
           vec3 normal = normalize(vec3(-dx, -dy, 0.2));
-          vec3 r = reflect(-light_dir, normal);
-          float fresnel = 1.0;//pow(1.0 - dot(normal, view), 1.0);
-          float s = fresnel * pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
-          // vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * u_sun;
-          // vec3 waterColor = mix(albedoShallow, u_skyColor, v_scalar) + s * u_sunColor;
-          vec3 waterColor = u_diffuse + s * u_sunColor;
+          vec3 r = reflect(-v_light_dir, normal);
+          float fresnel = pow(1.0 - dot(normal, view), 1.0);
+          float s = (0.3 + fresnel) * pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
+          vec3 diffuse = u_diffuse * (u_skyColor + pow(v_light_dir.z, 5.0));
+          vec3 waterColor = diffuse + s * u_sunColor;
           float alpha = clamp(v_scalar / 0.5, 0.0, 1.0);
           vec4 color = vec4(waterColor * alpha, alpha);
           gl_FragColor = color;
-
-          // gl_FragColor = texture2D(u_waves, v_position / 5000.0);
-          // gl_FragColor = vec4(0.5 * getHeight(v_position), 0.0, 0.0, 1.0);
-          // gl_FragColor = getDebugColor(v_position);
-
-          // gl_FragColor = vec4(fresnel, 0.0, 0.0, 1.0);
-          // gl_FragColor = vec4(normal * 0.5 + 0.5, 1.0);
       }
     `, {
       "a_position": 0,
@@ -502,7 +494,6 @@ export class ParticleProgram extends MaterialProgram {
         v_offset = a_offset;
         v_tint = vec4(1.0, 1.0, 1.0, alpha);
 
-        // Animation frame
         float frame = mod(floor(u_time * u_animation_parameters[3] + random.y * u_animation_parameters[0]), u_animation_parameters[0]);
         float bs = 1.0 / u_animation_parameters[1];
         float bt = 1.0 / u_animation_parameters[2];
@@ -626,7 +617,6 @@ export class SpriteProgram extends MaterialProgram {
         gl_Position = u_project * viewModel * position;
         v_offset = a_offset;
 
-        // Animation frame
         float frame = mod(floor(u_time * u_animation_parameters[3]), u_animation_parameters[0]);
         float bs = 1.0 / u_animation_parameters[1];
         float bt = 1.0 / u_animation_parameters[2];
@@ -722,8 +712,9 @@ export class AtmosphereProgram extends BaseProgram {
       void main(void) {
         vec3 light_dir = normalize(vec3(cos(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunAzimuth) * cos(u_sunElevation), sin(u_sunElevation)));
 
-        float alpha = 0.2;
-        v_color = vec4(u_skyColor * alpha, alpha);
+        vec3 color = u_skyColor;// + u_sunColor * dot(vec3(0.0, 0.0, 1.0), light_dir);
+        float alpha = clamp(0.8 - 0.5 * length(color), 0.0, 1.0);
+        v_color = vec4(color * alpha, alpha);
 
         gl_Position = a_position;
       }
