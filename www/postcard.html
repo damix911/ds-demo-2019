@@ -23,8 +23,7 @@
   <link rel="stylesheet" href="https://jsdev.arcgis.com/4.11/esri/themes/light/main.css">
   <script src="https://jsdev.arcgis.com/4.11/"></script>
   -->
- 
-  
+
   <!-- UNBUILT REPO -->
   <link rel="stylesheet" href="http://ddamico.esri.com/arcgis-js-api-4/esri/css/main.css">
   <script>
@@ -175,10 +174,9 @@
           }
 
           this.app.setWind(Math.PI * this.layer.windAngle / 180, this.layer.windSpeed);
-          const sunColor = this.toRGB(this.layer.sunColor); // vec3.fromValues(1.0, 1.0, 0.8);
-          const skyColor = this.toRGB(this.layer.skyColor); // vec3.fromValues(25.0 / 255.0, 72.0 / 255.0, 75.0 / 255.0);
+          const sunColor = this.toRGB(this.layer.sunColor);
+          const skyColor = this.toRGB(this.layer.skyColor);
           this.app.setAtmosphere(Math.PI * this.layer.sunElevation / 180, Math.PI * this.layer.sunAzimuth / 180, sunColor, skyColor);
-          // console.log("renderParameters.state.size", renderParameters.state.size);
           this.app.setView(
             renderParameters.state.center,
             renderParameters.state.rotation,
@@ -231,8 +229,6 @@
           layer.sunAzimuth = params.sunAzimuth;
           layer.sunColor = params.sunColor;
           layer.skyColor = params.skyColor;
-
-          // gui.load(params);
         });
       };
 
@@ -240,11 +236,6 @@
         basemap: "satellite",
         layers: [layer]
       });
-
-      // DEBUG ONLY!!!
-      // setTimeout(function () {
-      //   map.layers.remove(layer);
-      // }, 10000);
 
       var view = new MapView({
         container: "viewDiv",

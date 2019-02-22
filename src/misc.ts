@@ -4,12 +4,16 @@ export function createProgram(gl: WebGLRenderingContext, vsSrc: string, fsSrc: s
   const vs = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(vs, vsSrc);
   gl.compileShader(vs);
-  console.log(gl.getShaderInfoLog(vs));
+  if (!gl.getShaderParameter(vs, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(vs));
+  }
   
   const fs = gl.createShader(gl.FRAGMENT_SHADER);
   gl.shaderSource(fs, fsSrc);
   gl.compileShader(fs);
-  console.log(gl.getShaderInfoLog(fs));
+  if (!gl.getShaderParameter(fs, gl.COMPILE_STATUS)) {
+    console.error(gl.getShaderInfoLog(fs));
+  }
 
   const program = gl.createProgram();
   gl.attachShader(program, vs);
@@ -18,7 +22,9 @@ export function createProgram(gl: WebGLRenderingContext, vsSrc: string, fsSrc: s
     gl.bindAttribLocation(program, locations[attributeName], attributeName);
   }
   gl.linkProgram(program);
-  console.log(gl.getProgramInfoLog(program));
+  if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+    console.error(gl.getProgramInfoLog(program));
+  }
 
   return program;
 }
