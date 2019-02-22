@@ -356,7 +356,7 @@ export class WaterProgram extends MaterialProgram {
 
           vec3 normal = normalize(vec3(-dx, -dy, 0.2));
           vec3 r = reflect(-light_dir, normal);
-          float fresnel = pow(1.0 - dot(normal, view), 1.0);
+          float fresnel = 1.0;//pow(1.0 - dot(normal, view), 1.0);
           float s = fresnel * pow(clamp(dot(r, view), 0.0, 1.0), 5.0);
           // vec3 waterColor = mix(albedoShallow, albedoDeep, v_scalar) + s * u_sun;
           // vec3 waterColor = mix(albedoShallow, u_skyColor, v_scalar) + s * u_sunColor;
