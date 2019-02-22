@@ -41,8 +41,6 @@ export class Application {
   private fireGeometry: IGeometry;
   
   // Images and corresponding textures created from those images
-  private diffuseImage: HTMLImageElement;
-  private diffuseTexture: WebGLTexture;
   private leavesImage: HTMLImageElement;
   private leavesTexture: WebGLTexture;
   private wavesImage: HTMLImageElement;
@@ -80,13 +78,12 @@ export class Application {
   }
 
   async load() {
-    this.diffuseImage = await loadImage("assets/60b963f8b67ad2df8c49e82e9ef625fb.jpg");
-    this.leavesImage = await loadImage("assets/Tree.png");
-    this.wavesImage = await loadImage("assets/000.png");
-    this.smokeImage = await loadImage("assets/Smoke45Frames.png");
-    this.fireImage = await loadImage("assets/13221-v6.jpg");
-    this.middleCreek = await loadJson("assets/MiddleCreek.json");
-    this.trees = await loadJson("assets/Trees.json");
+    this.leavesImage = await loadImage("assets/tree.png");
+    this.wavesImage = await loadImage("assets/waves.png");
+    this.smokeImage = await loadImage("assets/smoke.png");
+    this.fireImage = await loadImage("assets/fire.jpg");
+    this.middleCreek = await loadJson("assets/lake-polygon.json");
+    this.trees = await loadJson("assets/tree-positions.json");
   }
 
   setPixelRatio(pixelRatio: number): void {
@@ -206,7 +203,6 @@ export class Application {
 
   private doInitialize(gl: WebGLRenderingContext) {
     // Textures
-    this.diffuseTexture = createTexture(gl, this.diffuseImage);
     this.leavesTexture = createTexture(gl, this.leavesImage);
     this.wavesTexture = createTexture(gl, this.wavesImage, false);
     this.smokeTexture = createTexture(gl, this.smokeImage);
@@ -392,7 +388,6 @@ export class Application {
 
   // Dispose WebGL resources
   private doDispose(gl: WebGLRenderingContext) {
-    gl.deleteTexture(this.diffuseTexture);
     gl.deleteTexture(this.leavesTexture);
     gl.deleteTexture(this.wavesTexture);
     gl.deleteTexture(this.smokeTexture);
