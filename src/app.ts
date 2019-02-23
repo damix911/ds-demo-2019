@@ -61,10 +61,14 @@ export class Application {
   windSpeed: number;
 
   // Atmosphere
-  sunElevation: number;
-  sunAzimuth: number;
-  sunColor: vec3;
-  skyColor: vec3;
+  sunElevation = 0.70;
+  sunAzimuth = 0;
+  sunColor = vec3.fromValues(1, 1, 0.79);
+  skyColor = vec3.fromValues(0.92, 0.99, 1);
+  sunElevationTarget = 0.70;
+  sunAzimuthTarget = 0;
+  sunColorTarget = vec3.fromValues(1, 1, 0.79);
+  skyColorTarget = vec3.fromValues(0.92, 0.99, 1);
 
   // View - original
   center = vec2.fromValues(0, 0);
@@ -106,10 +110,10 @@ export class Application {
   }
 
   setAtmosphere(sunElevation: number, sunAzimuth: number, sunColor: vec3, skyColor: vec3) {
-    this.sunElevation = sunElevation;
-    this.sunAzimuth = sunAzimuth;
-    this.sunColor = sunColor;
-    this.skyColor = skyColor;
+    this.sunElevationTarget = sunElevation;
+    this.sunAzimuthTarget = sunAzimuth;
+    this.sunColorTarget = sunColor;
+    this.skyColorTarget = skyColor;
   }
 
   setView(center: [number, number], rotation: number, resolution: number, pixelRatio: number, size: [number, number]) {
@@ -146,6 +150,14 @@ export class Application {
   }
 
   private doUpdate() {
+    this.sunElevation += 0.1 * (this.sunElevationTarget - this.sunElevation);
+    this.sunAzimuth += 0.1 * (this.sunAzimuthTarget - this.sunAzimuth);
+    this.sunColor[0] += 0.1 * (this.sunColorTarget[0] - this.sunColor[0]);
+    this.sunColor[1] += 0.1 * (this.sunColorTarget[1] - this.sunColor[1]);
+    this.sunColor[2] += 0.1 * (this.sunColorTarget[2] - this.sunColor[2]);
+    this.skyColor[0] += 0.1 * (this.skyColorTarget[0] - this.skyColor[0]);
+    this.skyColor[1] += 0.1 * (this.skyColorTarget[1] - this.skyColor[1]);
+    this.skyColor[2] += 0.1 * (this.skyColorTarget[2] - this.skyColor[2]);
   }
 
   private sceneSetup() {
