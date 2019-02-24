@@ -101,6 +101,24 @@ export class Application {
       }
     }
 
+    // function filter(a: any[]) {
+    //   var filtered: any[] = [];
+
+    //   for (const p of a) {
+    //     if (p[0] > -10539234.999234606 && p[0] < -10539026.588899642 &&
+    //         p[1] > 4651549.98021633 && p[1] < 4651659.261280222) {
+    //       continue;
+    //     }
+    //     filtered.push(p);
+    //   }
+      
+    //   return filtered;
+    // }
+
+    // this.trees.points = filter(this.trees.points);
+
+
+
     shuffle(this.trees.points);
   }
 
