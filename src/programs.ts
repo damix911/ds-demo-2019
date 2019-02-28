@@ -100,7 +100,7 @@ export class CanopyProgram extends MaterialProgram {
         vec2 xAxis = normalize(vec2(-1.0, 1.0));
         vec2 yAxis = vec2(-xAxis.y, xAxis.x);
 
-        float bend = 0.01 * (a_position.z / 10.0) * (cos(u_time + r * 10.0) + 1.0);
+        float bend = 0.05 * (a_position.z / 10.0) * (cos(u_time + r * 10.0) + 1.0);
         position.xy += bend * u_wind[1] * vec2(cos(-u_wind[0]), sin(-u_wind[0]));
         
         vec2 offset = a_offset.xy * (1.0 - a_position.z / 30.0);
