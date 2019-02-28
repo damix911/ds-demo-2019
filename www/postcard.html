@@ -158,7 +158,7 @@
 
     #lighting button:active:after {
       opacity: 1;
-      transition: 0.3s
+      transition: 0.2s
     }
   </style>
 
@@ -168,7 +168,7 @@
       "esri/layers/Layer",
       "esri/views/MapView",
       "esri/views/2d/layers/BaseLayerViewGL2D",
-      "esri/widgets/Home",
+      "esri/geometry/Extent",
       "esri/widgets/Expand",
       "esri/Viewpoint",
       "./bundles/app.js",
@@ -178,7 +178,7 @@
       Layer,
       MapView,
       BaseLayerViewGL2D,
-      Home,
+      Extent,
       Expand,
       Viewpoint,
       engine
@@ -263,8 +263,6 @@
       function setupLightingHandler(btnId, params) {
         var btn = document.getElementById(btnId);
         btn.addEventListener("click", function () {
-          layer.windAngle = params.windAngle;
-          layer.windSpeed = params.windSpeed;
           layer.sunElevation = params.sunElevation;
           layer.sunAzimuth = params.sunAzimuth;
           layer.sunColor = params.sunColor;
@@ -299,32 +297,24 @@
       var screen = document.getElementById("screen");
       var photo = document.getElementById("photo");
       setupLightingHandler("btnDawn", {
-        windAngle: 20,
-        windSpeed: 50,
         sunElevation: 35,
         sunAzimuth: 0,
         sunColor: "#c0c0c0",
         skyColor: "#ebfdff"
       });
       setupLightingHandler("btnNoon", {
-        windAngle: 50,
-        windSpeed: 150,
         sunElevation: 50,
         sunAzimuth: 0,
         sunColor: "#f0f0f0",
         skyColor: "#ebfdff"
       });
       setupLightingHandler("btnEvening", {
-        windAngle: 80,
-        windSpeed: 100,
         sunElevation: 45,
         sunAzimuth: 0,
         sunColor: "#ff8000",
         skyColor: "#ffa000"
       });
       setupLightingHandler("btnNight", {
-        windAngle: -20,
-        windSpeed: 200,
         sunElevation: 40,
         sunAzimuth: 0,
         sunColor: "#808080",
@@ -353,56 +343,73 @@
         });
       }
 
-      var treesButton = new Home({
-        view: view,
-        // iconClass: "fas fa-tree",
-        iconClass: "fas fa-camera",
-        viewpoint: new Viewpoint({
-          targetGeometry: {type: "extent", "spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10538620.965060156,"ymin":4651025.222102316,"xmax":-10538220.566408206,"ymax":4651304.993569041}
-        }),
-        goToOverride: function(view, goToParams) {
-          layer.windSpeed = 100;
-          return view.goTo(goToParams.target, goToParams.options);
-        },
-        label: "Watch the swaying trees"
+      // var treesButton = new Home({
+      //   view: view,
+      //   iconClass: "esri-icon-radio-checked",
+      //   // iconClass: "fas fa-camera",
+      //   viewpoint: new Viewpoint({
+      //     targetGeometry: {type: "extent", "spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10538620.965060156,"ymin":4651025.222102316,"xmax":-10538220.566408206,"ymax":4651304.993569041}
+      //   }),
+      //   goToOverride: function(view, goToParams) {
+      //     layer.windSpeed = 100;
+      //     return view.goTo(goToParams.target, goToParams.options);
+      //   },
+      //   label: "Watch the swaying trees"
+      // });
+
+      // view.ui.add(treesButton, "top-left");
+
+      // var campsiteButton = new Home({
+      //   view: view,
+      //   iconClass: "esri-icon-radio-checked",
+      //   // iconClass: "fas fa-camera",
+      //   viewpoint: new Viewpoint({
+      //     targetGeometry: {type: "extent", "spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10539288.079986323,"ymin":4651432.9504745575,"xmax":-10538487.282682069,"ymax":4651992.4934082525}
+      //   }),
+      //   goToOverride: function(view, goToParams) {
+      //     layer.windSpeed = 20;
+      //     return view.goTo(goToParams.target, goToParams.options);
+      //   },
+      //   label: "Go to the campsite"
+      // });
+
+      // view.ui.add(campsiteButton, "top-left");
+
+      // var photoButton = new Home({
+      //   view: view,
+      //   iconClass: "esri-icon-radio-checked",
+      //   // iconClass: "fas fa-camera",
+      //   goToOverride: function(view, goToParams) {
+      //     return new Promise(function (resolve) {
+      //       takePicture();
+      //       resolve();
+      //     });
+      //   },
+      //   label: "Take a picture"
+      // })
+
+      function addButton(buttonId, onClick) {
+        var btn = document.getElementById(buttonId);
+        view.ui.add(btn, "top-left");
+        btn.addEventListener("click", onClick);
+      }
+
+      var treesExtent = Extent.fromJSON({"spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10538620.965060156,"ymin":4651025.222102316,"xmax":-10538220.566408206,"ymax":4651304.993569041});
+      addButton("goToTreesBtn", function () {
+        view.goTo(treesExtent);
+      });
+      
+      var campsiteExtent = Extent.fromJSON({"spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10539288.079986323,"ymin":4651432.9504745575,"xmax":-10538487.282682069,"ymax":4651992.4934082525});
+      addButton("goToCampsiteBtn", function () {
+        view.goTo(campsiteExtent);
       });
 
-      view.ui.add(treesButton, "top-left");
-
-      var campsiteButton = new Home({
-        view: view,
-        // iconClass: "fas fa-campground",
-        iconClass: "fas fa-camera",
-        viewpoint: new Viewpoint({
-          targetGeometry: {type: "extent", "spatialReference":{"latestWkid":3857,"wkid":102100},"xmin":-10539288.079986323,"ymin":4651432.9504745575,"xmax":-10538487.282682069,"ymax":4651992.4934082525}
-        }),
-        goToOverride: function(view, goToParams) {
-          layer.windSpeed = 20;
-          return view.goTo(goToParams.target, goToParams.options);
-        },
-        label: "Go to the campsite"
+      addButton("takePictureBtn", function () {
+        takePicture();
       });
-
-      view.ui.add(campsiteButton, "top-left");
-
-      var photoButton = new Home({
-        view: view,
-        // iconClass: "fas fa-camera",
-        iconClass: "fas fa-camera",
-        goToOverride: function(view, goToParams) {
-          return new Promise(function (resolve) {
-            takePicture();
-            resolve();
-          });
-        },
-        label: "Take a picture"
-      })
-
-      view.ui.add(photoButton, "top-left");
 
       var timeOfTheDay = new Expand({
-        // expandIconClass: "fas fa-clock",
-        expandIconClass: "esri-icon-radio-checked",
+        expandIconClass: "fas fa-clock",
         content: document.getElementById("lighting")
       });
       view.ui.add(timeOfTheDay, "top-left");
@@ -430,5 +437,8 @@
     <button id="btnEvening"><i class="fas fa-glass-martini"></i>Evening</button>
     <button id="btnNight"><i class="fas fa-bed"></i>Night</button>
   </div>
+  <button class="fas fa-tree esri-widget--button" style="border: 0;" id="goToTreesBtn" type="button" title="Watch the swaying trees"></button>
+  <button class="fas fa-campground esri-widget--button" style="border: 0;" id="goToCampsiteBtn" type="button" title="Go to the campsite"></button>
+  <button class="fas fa-camera esri-widget--button" style="border: 0;" id="takePictureBtn" type="button" title="Take a picture"></button>
 </body>
 </html>
