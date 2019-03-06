@@ -2,7 +2,8 @@
 
 This is our entry for the [Thursday, March 7th Demo Theater session](https://www.esri.com/en-us/about/events/devsummit/agenda/agenda) at [Esri Developer Summit 2019](https://www.esri.com/en-us/about/events/devsummit/overview) in Palm Springs, CA.
 
-It is a basemap visually enhanced with a custom layer that uses WebGL to display scenic elements such as trees swaying in the wind and a realistic water effect.
+It is an app that displays basemap visually enhanced with a custom layer that uses WebGL to display scenic elements such as trees swaying in the wind and a realistic water effect.
+
 There are also some fire pits with flames and smoke.
 
 All these visual elements are influenced by simulated wind speed and direction.
