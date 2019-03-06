@@ -257,9 +257,9 @@ export class Application {
       size: [10, 10],
       texture: this.fireTexture,
       animationParameters: {
-        frames: 16,
-        rows: 4,
-        cols: 4,
+        frames: 7,
+        rows: 7,
+        cols: 1,
         fps: -10
       }
     };
